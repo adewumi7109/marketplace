@@ -9,6 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import type { LocationSelection } from "@/components/SearchBar";
 import { useLocations, useProductCategories, useProducts } from "@/lib/hooks";
+import { filterQueryString, locationPathSlug } from "@/lib/routes";
 import { slugify, titleFromSlug } from "@/lib/slug";
 import type { Category, Product } from "@/lib/types";
 
@@ -59,12 +60,8 @@ export default function LocationSearchPage({ params }: Props) {
 
   const replaceQuery = useCallback(
     (next: { query?: string; minPrice?: string; maxPrice?: string }) => {
-      const urlParams = new URLSearchParams(searchParams.toString());
-      Object.entries(next).forEach(([key, value]) => {
-        if (value) urlParams.set(key, value);
-        else urlParams.delete(key);
-      });
-      router.replace(`/${slug}/search${urlParams.toString() ? `?${urlParams.toString()}` : ""}`, {
+      const qs = filterQueryString(searchParams.toString(), next);
+      router.replace(`/${slug}/search${qs ? `?${qs}` : ""}`, {
         scroll: false,
       });
     },
@@ -78,23 +75,19 @@ export default function LocationSearchPage({ params }: Props) {
         return;
       }
 
-      const locationSlug = slugify(value.type === "city" ? value.city : value.state);
-      const urlParams = new URLSearchParams();
-      if (query) urlParams.set("query", query);
-      if (minPrice) urlParams.set("minPrice", minPrice);
-      if (maxPrice) urlParams.set("maxPrice", maxPrice);
-      router.push(`/${locationSlug}/search${urlParams.toString() ? `?${urlParams.toString()}` : ""}`);
+      const locationSlug = locationPathSlug(value);
+      const qs = filterQueryString(searchParams.toString(), { query, minPrice, maxPrice });
+      router.push(`/${locationSlug}/search${qs ? `?${qs}` : ""}`);
     },
-    [maxPrice, minPrice, query, router]
+    [maxPrice, minPrice, query, router, searchParams]
   );
 
   const handleCategoryChange = useCallback(
     (value: Category | null) => {
       if (!value) return;
 
-      const urlParams = new URLSearchParams(searchParams.toString());
-      urlParams.delete("category");
-      router.push(`/${slug}/${slugify(value.name)}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`);
+      const qs = filterQueryString(searchParams.toString());
+      router.push(`/${slug}/${slugify(value.name)}${qs ? `?${qs}` : ""}`);
     },
     [router, searchParams, slug]
   );

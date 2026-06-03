@@ -9,6 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import type { LocationSelection } from "@/components/SearchBar";
 import { useLocations, useProductCategories, useProducts } from "@/lib/hooks";
+import { filterQueryString, locationPathSlug } from "@/lib/routes";
 import { slugify, titleFromSlug } from "@/lib/slug";
 import type { Category, Product } from "@/lib/types";
 
@@ -68,13 +69,7 @@ export default function LocationCategoryProductsPage({ params }: Props) {
 
   const queryString = useCallback(
     (next: { query?: string; minPrice?: string; maxPrice?: string } = {}) => {
-      const urlParams = new URLSearchParams(searchParams.toString());
-      Object.entries(next).forEach(([key, value]) => {
-        if (value) urlParams.set(key, value);
-        else urlParams.delete(key);
-      });
-
-      return urlParams.toString();
+      return filterQueryString(searchParams.toString(), next);
     },
     [searchParams]
   );
@@ -102,8 +97,7 @@ export default function LocationCategoryProductsPage({ params }: Props) {
         return;
       }
 
-      const locationSlug = slugify(value.type === "city" ? value.city : value.state);
-      pushWithQuery(`/${locationSlug}/${categoryParam}`);
+      pushWithQuery(`/${locationPathSlug(value)}/${categoryParam}`);
     },
     [categoryParam, pushWithQuery]
   );

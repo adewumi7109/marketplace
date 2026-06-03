@@ -9,6 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import type { LocationSelection } from "@/components/SearchBar";
 import { useProductCategories, useProducts } from "@/lib/hooks";
+import { filterQueryString, legacyLocationFromQuery, locationPathSlug } from "@/lib/routes";
 import { slugify, titleFromSlug } from "@/lib/slug";
 import type { Category, Product } from "@/lib/types";
 
@@ -44,14 +45,10 @@ export default function CategoryProductsPage({ params }: Props) {
 
   const title = category?.name ?? titleFromSlug(slug);
 
-  const replaceQuery = useCallback(
-    (next: { query?: string; minPrice?: string; maxPrice?: string; city?: string; state?: string }) => {
-      const urlParams = new URLSearchParams(searchParams.toString());
-      Object.entries(next).forEach(([key, value]) => {
-        if (value) urlParams.set(key, value);
-        else urlParams.delete(key);
-      });
-      router.replace(`/${slug}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`, {
+  const replaceFilterQuery = useCallback(
+    (next: { query?: string; minPrice?: string; maxPrice?: string }) => {
+      const qs = filterQueryString(searchParams.toString(), next);
+      router.replace(`/${slug}${qs ? `?${qs}` : ""}`, {
         scroll: false,
       });
     },
@@ -61,24 +58,27 @@ export default function CategoryProductsPage({ params }: Props) {
   const handleLocationChange = useCallback(
     (value: LocationSelection | null) => {
       setSelectedLocation(value);
-      replaceQuery({
-        city: value?.type === "city" ? value.city : "",
-        state: value?.type === "state" ? value.state : "",
-      });
+      const qs = filterQueryString(searchParams.toString());
+      const path = value ? `/${locationPathSlug(value)}/${slug}` : `/${slug}`;
+      router.push(`${path}${qs ? `?${qs}` : ""}`);
     },
-    [replaceQuery]
+    [router, searchParams, slug]
   );
 
   const handleCategoryChange = useCallback(
     (nextCategory: Category | null) => {
-      const urlParams = new URLSearchParams(searchParams.toString());
-      router.push(
-        nextCategory
-          ? `/${slugify(nextCategory.name)}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
-          : "/"
-      );
+      const qs = filterQueryString(searchParams.toString());
+      if (!nextCategory) {
+        router.push("/");
+        return;
+      }
+
+      const categorySlug = slugify(nextCategory.name);
+      const locationSlug = selectedLocation ? locationPathSlug(selectedLocation) : "";
+      const path = locationSlug ? `/${locationSlug}/${categorySlug}` : `/${categorySlug}`;
+      router.push(`${path}${qs ? `?${qs}` : ""}`);
     },
-    [router, searchParams]
+    [router, searchParams, selectedLocation]
   );
 
   useEffect(() => {
@@ -95,6 +95,14 @@ export default function CategoryProductsPage({ params }: Props) {
     setMinPrice(searchParams.get("minPrice") || "");
     setMaxPrice(searchParams.get("maxPrice") || "");
   }, [searchParams]);
+
+  useEffect(() => {
+    const locationSlug = legacyLocationFromQuery(searchParams);
+    if (!locationSlug) return;
+
+    const qs = filterQueryString(searchParams.toString());
+    router.replace(`/${locationSlug}/${slug}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [router, searchParams, slug]);
 
   return (
     <div className="min-h-screen bg-white px-4 py-10 text-zinc-950 sm:px-6">
@@ -125,11 +133,11 @@ export default function CategoryProductsPage({ params }: Props) {
             onLocationChange={handleLocationChange}
             onMinPriceChange={(value) => {
               setMinPrice(value);
-              replaceQuery({ minPrice: value });
+              replaceFilterQuery({ minPrice: value });
             }}
             onMaxPriceChange={(value) => {
               setMaxPrice(value);
-              replaceQuery({ maxPrice: value });
+              replaceFilterQuery({ maxPrice: value });
             }}
             onClear={() => router.push("/")}
           />
