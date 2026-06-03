@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --primary-color: #10B981;
+    --loader-color: var(--primary-color);
+  }
+
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #18181b;
+  }
+
+  /* Custom scrollbar */
+  /* ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--primary-color, #f97316) 10%, white);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--primary-color, #f97316) 55%, white);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color, #f97316);
+  } */
+
+  /* Focus visible */
+  :focus-visible {
+    outline: 2px solid var(--primary-color, #f97316);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--loader-color, var(--primary-color, #f97316)) 10%, white) 25%,
+      color-mix(in srgb, var(--loader-color, var(--primary-color, #f97316)) 22%, white) 50%,
+      color-mix(in srgb, var(--loader-color, var(--primary-color, #f97316)) 10%, white) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}

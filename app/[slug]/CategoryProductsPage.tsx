@@ -1,0 +1,197 @@
+"use client";
+
+import { use, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
+import FilterSidebar from "@/components/FilterSidebar";
+import ProductCard from "@/components/ProductCard";
+import ProductDetailModal from "@/components/ProductDetailModal";
+import type { LocationSelection } from "@/components/SearchBar";
+import { useProductCategories, useProducts } from "@/lib/hooks";
+import { slugify, titleFromSlug } from "@/lib/slug";
+import type { Category, Product } from "@/lib/types";
+
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+export default function CategoryProductsPage({ params }: Props) {
+  const { slug } = use(params);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { categories } = useProductCategories();
+  const category = useMemo(
+    () => categories.find((item) => slugify(item.name) === slug || item.id === slug),
+    [categories, slug]
+  );
+
+  const [query, setQuery] = useState(searchParams.get("query") || searchParams.get("q") || "");
+  const [selectedLocation, setSelectedLocation] = useState<LocationSelection | null>(null);
+  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const { products, total, isLoading, isError, error } = useProducts(undefined, {
+    categoryId: category?.id ?? slug,
+    search: query,
+    city: selectedLocation?.type === "city" ? selectedLocation.city : undefined,
+    state: selectedLocation?.type === "state" ? selectedLocation.state : undefined,
+    minPrice,
+    maxPrice,
+    limit: 24,
+  });
+
+  const title = category?.name ?? titleFromSlug(slug);
+
+  const replaceQuery = useCallback(
+    (next: { query?: string; minPrice?: string; maxPrice?: string; city?: string; state?: string }) => {
+      const urlParams = new URLSearchParams(searchParams.toString());
+      Object.entries(next).forEach(([key, value]) => {
+        if (value) urlParams.set(key, value);
+        else urlParams.delete(key);
+      });
+      router.replace(`/${slug}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams, slug]
+  );
+
+  const handleLocationChange = useCallback(
+    (value: LocationSelection | null) => {
+      setSelectedLocation(value);
+      replaceQuery({
+        city: value?.type === "city" ? value.city : "",
+        state: value?.type === "state" ? value.state : "",
+      });
+    },
+    [replaceQuery]
+  );
+
+  const handleCategoryChange = useCallback(
+    (nextCategory: Category | null) => {
+      const urlParams = new URLSearchParams(searchParams.toString());
+      router.push(
+        nextCategory
+          ? `/${slugify(nextCategory.name)}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
+          : "/"
+      );
+    },
+    [router, searchParams]
+  );
+
+  useEffect(() => {
+    setQuery(searchParams.get("query") || searchParams.get("q") || "");
+    const city = searchParams.get("city") || "";
+    const state = searchParams.get("state") || "";
+    setSelectedLocation(
+      city
+        ? { type: "city", city, state, id: "" }
+        : state
+        ? { type: "state", state }
+        : null
+    );
+    setMinPrice(searchParams.get("minPrice") || "");
+    setMaxPrice(searchParams.get("maxPrice") || "");
+  }, [searchParams]);
+
+  return (
+    <div className="min-h-screen bg-white px-4 py-10 text-zinc-950 sm:px-6">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 flex items-center gap-3">
+          <Link
+            href="/"
+            className="rounded-lg border border-primary/20 bg-white p-2 text-zinc-500 transition-colors hover:text-primary"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-zinc-950">
+              {title} products in Nigeria
+            </h1>
+            {!isLoading && !isError && <p className="text-sm text-zinc-500">{total} products</p>}
+          </div>
+        </div>
+
+        <div className="flex gap-10">
+          <FilterSidebar
+            categories={categories}
+            selectedCategory={category?.id ?? slug}
+            selectedLocation={selectedLocation}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            onCategoryChange={handleCategoryChange}
+            onLocationChange={handleLocationChange}
+            onMinPriceChange={(value) => {
+              setMinPrice(value);
+              replaceQuery({ minPrice: value });
+            }}
+            onMaxPriceChange={(value) => {
+              setMaxPrice(value);
+              replaceQuery({ maxPrice: value });
+            }}
+            onClear={() => router.push("/")}
+          />
+
+          <main className="min-w-0 flex-1">
+            {isError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+                {error instanceof Error ? error.message : "Unable to load products."}
+              </div>
+            )}
+
+            {isLoading && !isError && (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 9 }).map((_, index) => (
+                  <div key={index} className="overflow-hidden rounded-2xl border border-primary/20 bg-white">
+                    <div className="h-36 skeleton" />
+                    <div className="space-y-3 p-4">
+                      <div className="h-4 w-3/4 skeleton rounded-full" />
+                      <div className="h-3 w-1/2 skeleton rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && !isError && products.length > 0 && (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    storePhone={product.store?.phone ?? ""}
+                    onProductClick={setSelectedProduct}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!isLoading && !isError && products.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Zap className="h-7 w-7" />
+                </div>
+                <h2 className="font-display mb-2 text-xl font-semibold">No products found</h2>
+                <button
+                  onClick={() => router.push("/")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                >
+                  Browse all products <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+
+      <ProductDetailModal
+        product={selectedProduct}
+        storePhone={selectedProduct?.store?.phone ?? ""}
+        primaryColor="green"
+        onClose={() => setSelectedProduct(null)}
+      />
+    </div>
+  );
+}
