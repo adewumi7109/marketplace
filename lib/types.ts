@@ -43,6 +43,8 @@ export interface ProductLocation {
   state?: string | null;
   country?: string | null;
   lga?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export type Location = ProductLocation;
@@ -67,12 +69,15 @@ export interface Store {
   banner?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
+  primaryColor?: string | null;
   phone: string;
   email?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  locationId?: string | null;
+  locationData?: ProductLocation | null;
   category: string;
   categoryId?: string | null;
   storeCategory?: StoreCategory | null;
@@ -84,6 +89,7 @@ export interface Store {
   isVerified?: boolean;
   rating?: number;
   productCount?: number;
+  storeViewCount?: number;
   products?: Product[];
   createdAt?: string;
   updatedAt?: string;
@@ -110,6 +116,8 @@ export interface Product {
   productCategory?: ProductCategory | null;
   locationId?: string | null;
   location?: ProductLocation | null;
+  viewCount?: number;
+  whatsappClickCount?: number;
   whatsappOrderLink?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -147,17 +155,28 @@ export interface LoginInput {
   password: string;
 }
 
+export interface GoogleAuthInput {
+  idToken?: string;
+  token?: string;
+  accessToken?: string;
+  access_token?: string;
+  nonce?: string;
+}
+
 export interface CreateStoreInput {
   name: string;
+  slug?: string;
   description?: string;
   logo?: string;
   banner?: string;
+  primaryColor?: string;
   phone: string;
   email?: string;
   address?: string;
   city?: string;
   state?: string;
   country?: string;
+  locationId?: string;
   categoryId: string;
   templateId?: string;
 }
@@ -172,7 +191,10 @@ export interface CreateProductInput {
   price: number;
   images?: string[];
   inStock?: boolean;
+  isNegotiable?: boolean;
   categoryId?: string;
+  locationId?: string;
+  storeId?: string;
 }
 
 export type UpdateProductInput = Partial<CreateProductInput>;
@@ -204,6 +226,29 @@ export interface PaginatedResponse<T> {
   limit: number;
   pageSize: number;
   totalPages?: number;
+}
+
+export interface SellerActivity {
+  id: string;
+  type?: string | null;
+  createdAt?: string;
+  product?: {
+    id: string;
+    name: string;
+    slug?: string | null;
+  };
+  store?: {
+    id: string;
+    name: string;
+    slug?: string | null;
+  };
+}
+
+export interface SellerAnalytics {
+  totalProducts: number;
+  storeViewsThisWeek: number;
+  whatsappClicks: number;
+  recentActivity: SellerActivity[];
 }
 
 export interface ApiError {
@@ -238,16 +283,20 @@ export interface ProductQueryParams {
   minPrice?: number | string;
   maxPrice?: number | string;
   inStock?: boolean;
+  isActive?: boolean;
   page?: number;
   limit?: number;
   pageSize?: number;
 }
 
 export interface LocationQueryParams {
+  q?: string;
+  search?: string;
   state?: string;
   city?: string;
   country?: string;
   lga?: string;
+  hasProducts?: boolean;
   page?: number;
   limit?: number;
   pageSize?: number;

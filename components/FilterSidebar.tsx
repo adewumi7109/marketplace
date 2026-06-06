@@ -45,7 +45,7 @@ export default function FilterSidebar({
     const fetchLocations = async () => {
       setLoadingLocations(true);
       try {
-        const res = await getLocations({ country: "Nigeria", limit: 100 });
+        const res = await getLocations({ country: "Nigeria", hasProducts: true, limit: 100 });
         setLocations(res.data);
       } catch (err) {
         console.error("Failed to load locations", err);
@@ -89,7 +89,7 @@ export default function FilterSidebar({
   );
 
   return (
-    <aside className="w-full lg:w-60 shrink-0 space-y-6">
+    <aside className="w-full shrink-0 space-y-5 lg:w-60">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
@@ -138,7 +138,7 @@ export default function FilterSidebar({
                 <p className="text-sm text-zinc-500">Loading locations...</p>
               </div>
             ) : (
-              <div className="flex flex-col" style={{ height: 480 }}>
+              <div className="flex max-h-[68vh] min-h-[360px] flex-col sm:h-[480px]">
                 {mode === "states" && (
                   <>
                     <button
@@ -244,10 +244,10 @@ export default function FilterSidebar({
           Category
         </p>
 
-        <div className="space-y-1">
+        <div className="max-h-72 space-y-1 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible lg:pr-0">
           <button
             onClick={() => onCategoryChange(null)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+            className={`w-full rounded-lg px-3 py-2.5 text-left text-sm transition-all ${
               !selectedCategory
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-zinc-600 hover:text-zinc-950 hover:bg-primary/10"
@@ -260,7 +260,7 @@ export default function FilterSidebar({
             <button
               key={cat.id}
               onClick={() => onCategoryChange(cat)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-all ${
                 selectedCategory === cat.id
                   ? "bg-primary/10 text-primary font-medium"
                   : "text-zinc-600 hover:text-zinc-950 hover:bg-primary/10"
@@ -288,7 +288,7 @@ export default function FilterSidebar({
           Price
         </p>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-zinc-500">
               Min price

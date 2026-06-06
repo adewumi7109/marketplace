@@ -1,102 +1,131 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, LogOut, Package, Plus, Store as StoreIcon } from "lucide-react";
-import type { Store, UserProfile } from "@/lib/types";
+import {
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Package,
+  Settings,
+  Store as StoreIcon,
+} from "lucide-react";
+import type { UserProfile } from "@/lib/types";
+
+export type DashboardView = "overview" | "products" | "settings";
 
 type SellerSidebarProps = {
   user?: UserProfile;
-  stores: Store[];
-  selectedSlug?: string;
-  onSelectStore: (slug: string) => void;
+  activeView: DashboardView;
+  collapsed: boolean;
+  onChangeView: (view: DashboardView) => void;
+  onToggleCollapsed: () => void;
   onLogout: () => void;
 };
 
+const navItems: Array<{
+  id: DashboardView;
+  label: string;
+  icon: typeof BarChart3;
+}> = [
+  { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "products", label: "Products", icon: Package },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+
 export default function SellerSidebar({
   user,
-  stores,
-  selectedSlug,
-  onSelectStore,
+  activeView,
+  collapsed,
+  onChangeView,
+  onToggleCollapsed,
   onLogout,
 }: SellerSidebarProps) {
   return (
-    <aside className="flex min-h-screen flex-col border-r border-zinc-200 bg-white lg:sticky lg:top-0">
-      <div className="border-b border-zinc-200 px-5 py-5">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-950 text-white">
-            <StoreIcon className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block font-display text-lg font-bold tracking-tight">Seller Desk</span>
-            <span className="block text-xs text-zinc-500">MarktPlace</span>
-          </span>
-        </Link>
-      </div>
-
-      <nav className="space-y-1 px-3 py-4">
-        <a className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary">
-          <LayoutDashboard className="h-4 w-4" />
-          Overview
-        </a>
-        <a href="#stores" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950">
-          <StoreIcon className="h-4 w-4" />
-          Stores
-        </a>
-        <a href="#products" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950">
-          <Package className="h-4 w-4" />
-          Products
-        </a>
-      </nav>
-
-      <div className="flex-1 px-3 pb-4">
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Your stores</p>
-            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-zinc-800 ring-1 ring-zinc-200">
-              {stores.length}
+    <aside
+      className={`flex border-r border-zinc-200 bg-white lg:sticky lg:top-0 lg:min-h-screen ${
+        collapsed ? "lg:w-20" : "lg:w-72"
+      }`}
+    >
+      <div className="flex w-full flex-col">
+        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
+              <StoreIcon className="h-5 w-5" />
             </span>
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {stores.slice(0, 6).map((store) => (
-              <button
-                key={store.id}
-                type="button"
-                onClick={() => onSelectStore(store.slug)}
-                className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${
-                  selectedSlug === store.slug
-                    ? "border-primary/30 bg-white shadow-sm"
-                    : "border-transparent hover:border-zinc-200 hover:bg-white"
-                }`}
-              >
-                <span className="block truncate text-sm font-semibold text-zinc-950">{store.name}</span>
-                <span className="mt-1 block text-xs text-zinc-500">{store.productCount ?? 0} products</span>
-              </button>
-            ))}
-
-            {stores.length === 0 && (
-              <a href="#create-store" className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm font-semibold text-zinc-600">
-                <Plus className="h-4 w-4" />
-                Create a store
-              </a>
+            {!collapsed && (
+              <span className="min-w-0">
+                <span className="block truncate font-display text-lg font-bold tracking-tight">
+                  Seller Desk
+                </span>
+                <span className="block truncate text-xs text-zinc-500">WhatsApp commerce</span>
+              </span>
             )}
-          </div>
-        </div>
-      </div>
+          </Link>
 
-      <div className="border-t border-zinc-200 p-4">
-        <div className="mb-3 min-w-0">
-          <p className="truncate text-sm font-semibold text-zinc-950">{user?.name || "Seller"}</p>
-          <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="hidden h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-950 lg:inline-flex"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950 lg:hidden"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign out
-        </button>
+
+        <nav className="grid grid-cols-3 gap-2 border-b border-zinc-200 p-3 lg:block lg:space-y-1 lg:border-b-0">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = activeView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onChangeView(item.id)}
+                className={`flex h-11 items-center justify-center gap-3 rounded-lg px-3 text-sm font-semibold transition lg:w-full lg:justify-start ${
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+                }`}
+                title={collapsed ? item.label : undefined}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span className="hidden lg:inline">{item.label}</span>}
+                <span className="lg:hidden">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="hidden flex-1 lg:block" />
+
+        <div className="hidden border-t border-zinc-200 p-4 lg:block">
+          {!collapsed && (
+            <div className="mb-3 min-w-0">
+              <p className="truncate text-sm font-semibold text-zinc-950">{user?.name || "Seller"}</p>
+              <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            title={collapsed ? "Sign out" : undefined}
+          >
+            <LogOut className="h-4 w-4" />
+            {!collapsed && "Sign out"}
+          </button>
+        </div>
       </div>
     </aside>
   );

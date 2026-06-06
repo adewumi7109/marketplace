@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, MessageCircle, X } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { buildWhatsAppLink, formatPrice, getProduct } from "@/lib/api";
+import { buildWhatsAppLink, formatPrice, getProduct, trackProductView, trackProductWhatsAppClick } from "@/lib/api";
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -47,6 +47,11 @@ export default function ProductDetailModal({
       alive = false;
     };
   }, [product]);
+
+  useEffect(() => {
+    if (!detail?.id) return;
+    trackProductView(detail.id).catch(() => undefined);
+  }, [detail?.id]);
 
   useEffect(() => {
     if (!product) return;
@@ -207,6 +212,9 @@ export default function ProductDetailModal({
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  trackProductWhatsAppClick(detail.id).catch(() => undefined);
+                }}
                 className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 style={{ backgroundColor: primaryColor }}
               >

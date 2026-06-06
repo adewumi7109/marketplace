@@ -54,7 +54,7 @@ export default function SearchBar({
     const fetchLocations = async () => {
       setLoading(true);
       try {
-        const res = await getLocations();
+        const res = await getLocations({ country: "Nigeria", hasProducts: true, limit: 100 });
         setLocations(res.data);
       } catch (err) {
         console.error("Failed to load locations", err);

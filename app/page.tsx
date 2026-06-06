@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Zap, LocateFixed } from "lucide-react";
+import { ArrowRight, SlidersHorizontal, Zap } from "lucide-react";
 import FilterSidebar from "@/components/FilterSidebar";
 import SearchBar, { type LocationSelection } from "@/components/SearchBar";
 import ProductCard from "@/components/ProductCard";
-import ProductDetailModal from "@/components/ProductDetailModal";
 import { useProductCategories, useProducts } from "@/lib/hooks";
 import type { Category, Product } from "@/lib/types";
 import { useCurrentLocation } from "@/lib/userLocation";
@@ -23,10 +22,9 @@ export default function MarketplacePage() {
   const [maxPrice, setMaxPrice] = useState("");
   const [page] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
 
-  const { products, total, isLoading, isError, error } = useProducts(undefined, {
+  const { products, isLoading, isError, error } = useProducts(undefined, {
     categoryId: category,
     search,
     minPrice,
@@ -89,6 +87,14 @@ export default function MarketplacePage() {
       }
 
       router.push(`/${slugify(nextCategory.name)}`);
+    },
+    [router]
+  );
+
+  const openProduct = useCallback(
+    (product: Product) => {
+      if (!product.store?.slug || !product.slug) return;
+      router.push(`/products/${product.store.slug}/${product.slug}`);
     },
     [router]
   );
@@ -249,17 +255,15 @@ useEffect(() => {
                     {error instanceof Error ? error.message : "Unable to load products"}
                   </span>
                 ) : (
-                  <span>
-                    <strong className="text-zinc-950">{total}</strong> products found
-                    {search && ` for "${search}"`}
-                  </span>
+                  <span>{search ? `Showing results for "${search}"` : "Browse products"}</span>
                 )}
               </div>
 
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="flex items-center gap-2 rounded-lg border border-primary/20 bg-white px-3 py-1.5 text-sm text-zinc-600 shadow-sm transition-colors hover:text-primary lg:hidden"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-primary/30 bg-white px-3 text-sm font-semibold text-zinc-800 shadow-sm transition-colors hover:border-primary hover:text-primary lg:hidden"
               >
+                <SlidersHorizontal className="h-4 w-4" />
                 Filters
                 {(category || minPrice || maxPrice) && (
                   <span className="h-2 w-2 rounded-full bg-primary" />
@@ -268,7 +272,7 @@ useEffect(() => {
             </div>
 
             {sidebarOpen && (
-              <div className="mb-6 rounded-2xl border border-primary/20 bg-white p-4 shadow-sm lg:hidden">
+              <div className="mb-6 rounded-xl border border-primary/20 bg-white p-4 shadow-lg lg:hidden">
                 <FilterSidebar
                   categories={categories}
                   selectedCategory={category}
@@ -311,11 +315,11 @@ useEffect(() => {
             )}
 
             {isLoading && !isError && (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 9 }).map((_, index) => (
-                  <div key={index} className="overflow-hidden rounded-2xl border border-primary/20 bg-white">
-                    <div className="h-36 skeleton" />
-                    <div className="space-y-3 p-4">
+                  <div key={index} className="overflow-hidden rounded-lg border border-primary/20 bg-white">
+                    <div className="h-28 skeleton" />
+                    <div className="space-y-2 p-3">
                       <div className="h-4 w-3/4 skeleton rounded-full" />
                       <div className="h-3 w-1/2 skeleton rounded-full" />
                       <div className="h-3 w-2/3 skeleton rounded-full" />
@@ -326,7 +330,7 @@ useEffect(() => {
             )}
 
             {!isLoading && !isError && products.length > 0 && (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((product, index) => {
                   const categoryKey = product.category?.toLowerCase() ?? "";
                   const variant = categoryKey.includes("fashion")
@@ -350,8 +354,9 @@ useEffect(() => {
                         product={product}
                         storePhone={product.store?.phone ?? ""}
                         variant={variant}
+                        cardStyle="compact"
                         showInStock={variant !== "fashion"}
-                        onProductClick={setSelectedProduct}
+                        onProductClick={openProduct}
                       />
                     </div>
                   );
@@ -381,13 +386,6 @@ useEffect(() => {
           </div>
         </div>
       </div>
-
-      <ProductDetailModal
-        product={selectedProduct}
-        storePhone={selectedProduct?.store?.phone ?? ""}
-        primaryColor="green"
-        onClose={() => setSelectedProduct(null)}
-      />
     </div>
   );
 }

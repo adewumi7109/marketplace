@@ -7,12 +7,14 @@ import type {
   Location,
   LocationQueryParams,
   LoginInput,
+  GoogleAuthInput,
   PaginatedResponse,
   Product,
   ProductCategory,
   ProductLocation,
   ProductQueryParams,
   RegisterInput,
+  SellerAnalytics,
   Store,
   StoreCategory,
   StoreQueryParams,
@@ -86,6 +88,25 @@ function valueAsNumber(value: unknown, fallback = 0) {
 
 function valueAsBoolean(value: unknown, fallback = false) {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function payloadMessage(payload: unknown): string | null {
+  if (typeof payload === "string" && payload.trim()) return payload;
+  if (!isRecord(payload)) return null;
+
+  for (const key of ["message", "error", "detail", "statusText"]) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (isRecord(value)) {
+      const nested = payloadMessage(value);
+      if (nested) return nested;
+    }
+  }
+
+  const data = payload.data;
+  if (isRecord(data)) return payloadMessage(data);
+
+  return null;
 }
 
 function appendQuery(
@@ -165,23 +186,26 @@ export async function apiFetch<T>(
     throw new ApiRequestError("Please sign in to continue.", 401);
   }
 
-  const res = await fetch(apiUrl(path), {
-    ...options,
-    body,
-    headers: {
-      ...(body && !isFormDataBody ? { "Content-Type": "application/json" } : {}),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(apiUrl(path), {
+      ...options,
+      body,
+      headers: {
+        ...(body && !isFormDataBody ? { "Content-Type": "application/json" } : {}),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...headers,
+      },
+    });
+  } catch (error) {
+    throw new ApiRequestError("No network. Check your connection and try again.", 0, error);
+  }
 
   const payload = await parseJsonResponse(res);
 
   if (!res.ok) {
-    const message =
-      isRecord(payload) && typeof payload.message === "string"
-        ? payload.message
-        : res.statusText || `API error ${res.status}`;
+    const message = payloadMessage(payload) ?? res.statusText ?? `API error ${res.status}`;
 
     throw new ApiRequestError(message, res.status, payload);
   }
@@ -221,6 +245,7 @@ export function normalizeStore(input: unknown): Store {
   const source = isRecord(input) ? input : {};
   const category = isRecord(source.category) ? source.category : source.storeCategory;
   const template = isRecord(source.template) ? source.template : source.templateData;
+  const location = isRecord(source.location) ? source.location : null;
   const count = isRecord(source._count) ? source._count : {};
   const products = Array.isArray(source.products)
     ? source.products.map(normalizeProduct)
@@ -236,12 +261,17 @@ export function normalizeStore(input: unknown): Store {
     banner: valueAsString(source.banner) || valueAsString(source.bannerUrl) || null,
     logoUrl: valueAsString(source.logoUrl) || valueAsString(source.logo) || null,
     bannerUrl: valueAsString(source.bannerUrl) || valueAsString(source.banner) || null,
+    primaryColor: valueAsString(source.primaryColor) || null,
     phone: valueAsString(source.phone),
     email: valueAsString(source.email) || null,
     address: valueAsString(source.address) || null,
-    city: valueAsString(source.city) || null,
-    state: valueAsString(source.state) || null,
-    country: valueAsString(source.country) || null,
+    city: valueAsString(source.city) || (location ? valueAsString(location.city) : null),
+    state: valueAsString(source.state) || (location ? valueAsString(location.state) : null),
+    country: valueAsString(source.country) || (location ? valueAsString(location.country) : null),
+    locationId:
+      valueAsString(source.locationId) ||
+      (location ? valueAsString(location.id) : null),
+    locationData: location ? (location as unknown as ProductLocation) : null,
     category: storeCategoryName(source),
     categoryId:
       valueAsString(source.categoryId) ||
@@ -260,6 +290,7 @@ export function normalizeStore(input: unknown): Store {
       source.productCount,
       valueAsNumber(count.products, products?.length ?? 0)
     ),
+    storeViewCount: valueAsNumber(source.storeViewCount, valueAsNumber(count.storeViews)),
     products,
     createdAt: valueAsString(source.createdAt),
     updatedAt: valueAsString(source.updatedAt),
@@ -301,6 +332,8 @@ export function normalizeProduct(input: unknown): Product {
       valueAsString(source.locationId) ||
       (location ? valueAsString(location.id) : null),
     location: location ? (location as unknown as ProductLocation) : null,
+    viewCount: valueAsNumber(source.viewCount),
+    whatsappClickCount: valueAsNumber(source.whatsappClickCount),
     whatsappOrderLink: valueAsString(source.whatsappOrderLink),
     createdAt: valueAsString(source.createdAt),
     updatedAt: valueAsString(source.updatedAt),
@@ -316,6 +349,8 @@ export function normalizeLocation(input: unknown): Location {
     state: valueAsString(source.state) || null,
     country: valueAsString(source.country) || null,
     lga: valueAsString(source.lga) || null,
+    latitude: source.latitude === null ? null : valueAsNumber(source.latitude),
+    longitude: source.longitude === null ? null : valueAsNumber(source.longitude),
   };
 }
 
@@ -396,6 +431,7 @@ function productQueryParams(params?: ProductQueryParams) {
     minPrice: params?.minPrice,
     maxPrice: params?.maxPrice,
     inStock: params?.inStock,
+    isActive: params?.isActive,
     page: params?.page,
     limit: params?.limit ?? params?.pageSize,
   };
@@ -403,9 +439,43 @@ function productQueryParams(params?: ProductQueryParams) {
 
 function locationQueryParams(params?: LocationQueryParams) {
   return {
+    q: params?.q ?? params?.search,
     state: params?.state,
     city: params?.city,
     country: params?.country,
+    hasProducts: params?.hasProducts,
+    page: params?.page,
+    limit: params?.limit ?? params?.pageSize,
+  };
+}
+
+function normalizeSellerAnalytics(input: unknown): SellerAnalytics {
+  const source = isRecord(input) ? input : {};
+  const activity = Array.isArray(source.recentActivity) ? source.recentActivity : [];
+
+  return {
+    totalProducts: valueAsNumber(source.totalProducts),
+    storeViewsThisWeek: valueAsNumber(source.storeViewsThisWeek),
+    whatsappClicks: valueAsNumber(source.whatsappClicks),
+    recentActivity: activity.filter(isRecord).map((item) => ({
+      id: valueAsString(item.id),
+      type: typeof item.type === "string" ? item.type : null,
+      createdAt: valueAsString(item.createdAt),
+      product: isRecord(item.product)
+        ? {
+            id: valueAsString(item.product.id),
+            name: valueAsString(item.product.name, "Product"),
+            slug: valueAsString(item.product.slug),
+          }
+        : undefined,
+      store: isRecord(item.store)
+        ? {
+            id: valueAsString(item.store.id),
+            name: valueAsString(item.store.name, "Store"),
+            slug: valueAsString(item.store.slug),
+          }
+        : undefined,
+    })),
   };
 }
 
@@ -455,6 +525,17 @@ export async function login(input: LoginInput) {
   return response;
 }
 
+export async function continueWithGoogle(input: GoogleAuthInput) {
+  const payload = await apiFetch<unknown>("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const response = normalizeAuthResponse(payload);
+  const token = extractAccessToken(response);
+  if (token) setAccessToken(token);
+  return response;
+}
+
 export async function getMe(token?: string | null) {
   const payload = await apiFetch<unknown>("/api/me", { token, requireAuth: true });
   const response = unwrapOne(payload, ["data", "user", "profile"]) as UserProfile;
@@ -463,6 +544,11 @@ export async function getMe(token?: string | null) {
     ...response,
     stores: Array.isArray(response.stores) ? response.stores.map(normalizeStore) : [],
   };
+}
+
+export async function getSellerAnalytics() {
+  const payload = await apiFetch<unknown>("/api/me/analytics", { requireAuth: true });
+  return normalizeSellerAnalytics(unwrapOne(payload, ["data", "analytics"]));
 }
 
 export async function getMarketplaceStores(
@@ -497,6 +583,23 @@ export async function createStore(input: CreateStoreInput | FormData, token?: st
   return normalizeStore(unwrapOne(payload, ["data", "store"]));
 }
 
+export async function checkStoreSlug(slug: string) {
+  const payload = await apiFetch<unknown>(
+    appendQuery("/api/stores/check-slug", { slug })
+  );
+  const result = unwrapOne(payload, ["data"]) as {
+    slug?: string;
+    exists?: boolean;
+    available?: boolean;
+  };
+
+  return {
+    slug: valueAsString(result.slug),
+    exists: valueAsBoolean(result.exists),
+    available: valueAsBoolean(result.available),
+  };
+}
+
 export async function getStoreBySlug(slug: string): Promise<Store> {
   const payload = await apiFetch<unknown>(`/api/stores/${encodeURIComponent(slug)}`, {
     cache: "no-store",
@@ -507,12 +610,13 @@ export async function getStoreBySlug(slug: string): Promise<Store> {
 
 export async function updateStore(
   slug: string,
-  input: UpdateStoreInput,
+  input: UpdateStoreInput | FormData,
   token?: string | null
 ) {
-  const payload = await apiFetch<unknown>(`/api/stores/${encodeURIComponent(slug)}`, {
+  const isFormDataInput = typeof FormData !== "undefined" && input instanceof FormData;
+  const payload = await apiFetch<unknown>(`/api/stores/${encodeURIComponent(slug)}/edit`, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body: isFormDataInput ? input : JSON.stringify(input),
     token,
     requireAuth: true,
   });
@@ -557,6 +661,38 @@ export async function getProductsByStore(
   return unwrapPaginated(payload, ["data", "products", "items"], normalizeProduct);
 }
 
+export async function getSellerProducts(
+  params?: ProductQueryParams
+): Promise<PaginatedResponse<Product>> {
+  const payload = await apiFetch<unknown>(
+    appendQuery("/api/me/products", productQueryParams(params)),
+    { requireAuth: true }
+  );
+
+  return unwrapPaginated(payload, ["data", "products", "items"], normalizeProduct);
+}
+
+export async function getStoreProductBySlug(slug: string, productSlug: string) {
+  const payload = await apiFetch<unknown>(
+    `/api/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productSlug)}`,
+    { cache: "no-store" }
+  );
+
+  return normalizeProduct(unwrapOne(payload, ["data", "product"]));
+}
+
+export async function createSellerProduct(input: CreateProductInput | FormData, token?: string | null) {
+  const isFormDataInput = typeof FormData !== "undefined" && input instanceof FormData;
+  const payload = await apiFetch<unknown>("/api/me/products", {
+    method: "POST",
+    body: isFormDataInput ? input : JSON.stringify(input),
+    token,
+    requireAuth: true,
+  });
+
+  return normalizeProduct(unwrapOne(payload, ["data", "product"]));
+}
+
 export async function createProduct(
   slug: string,
   input: CreateProductInput,
@@ -580,14 +716,41 @@ export async function getProduct(id: string) {
   return normalizeProduct(unwrapOne(payload, ["data", "product"]));
 }
 
+export async function trackProductView(id: string) {
+  return apiFetch<unknown>(`/api/products/${encodeURIComponent(id)}/view`, {
+    method: "POST",
+  });
+}
+
+export async function trackProductWhatsAppClick(id: string) {
+  return apiFetch<unknown>(`/api/products/${encodeURIComponent(id)}/whatsapp-click`, {
+    method: "POST",
+  });
+}
+
+export async function trackStoreView(slug: string) {
+  return apiFetch<unknown>(`/api/stores/${encodeURIComponent(slug)}/view`, {
+    method: "POST",
+  });
+}
+
+export async function getSellerProduct(id: string, token?: string | null) {
+  const payload = await apiFetch<unknown>(`/api/me/products/${encodeURIComponent(id)}`, {
+    token,
+    requireAuth: true,
+  });
+  return normalizeProduct(unwrapOne(payload, ["data", "product"]));
+}
+
 export async function updateProduct(
   id: string,
-  input: UpdateProductInput,
+  input: UpdateProductInput | FormData,
   token?: string | null
 ) {
-  const payload = await apiFetch<unknown>(`/api/products/${encodeURIComponent(id)}`, {
+  const isFormDataInput = typeof FormData !== "undefined" && input instanceof FormData;
+  const payload = await apiFetch<unknown>(`/api/me/products/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body: isFormDataInput ? input : JSON.stringify(input),
     token,
     requireAuth: true,
   });
@@ -596,7 +759,7 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string, token?: string | null) {
-  return apiFetch<unknown>(`/api/products/${encodeURIComponent(id)}`, {
+  return apiFetch<unknown>(`/api/me/products/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
     requireAuth: true,

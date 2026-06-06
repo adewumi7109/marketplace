@@ -1,7 +1,7 @@
 export default function Loading() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="rounded-2xl overflow-hidden border border-primary/20 bg-white">
             <div className="h-36 skeleton" />

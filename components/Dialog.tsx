@@ -25,7 +25,7 @@ export default function Dialog({ open, onClose, title, children }: DialogProps) 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -33,7 +33,7 @@ export default function Dialog({ open, onClose, title, children }: DialogProps) 
       />
 
       {/* Dialog box */}
-      <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+      <div className="relative z-10 max-h-[88vh] w-full max-w-md overflow-hidden rounded-xl bg-white p-5 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-3">
           <h2 className="text-lg font-semibold">{title}</h2>
@@ -47,7 +47,7 @@ export default function Dialog({ open, onClose, title, children }: DialogProps) 
         </div>
 
         {/* Content */}
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 min-h-0">{children}</div>
       </div>
     </div>
   );

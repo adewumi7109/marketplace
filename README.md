@@ -1,6 +1,6 @@
 # MarktPlace Frontend
 
-A production-ready marketplace frontend built with **Next.js 14 (App Router)**, **TypeScript**, **TailwindCSS**, and **SWR**.
+A production-ready marketplace frontend built with **Next.js App Router**, **TypeScript**, **TailwindCSS**, and **SWR**.
 
 ---
 
@@ -8,7 +8,7 @@ A production-ready marketplace frontend built with **Next.js 14 (App Router)**, 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js App Router |
 | Language | TypeScript |
 | Styling | TailwindCSS |
 | Data Fetching | SWR |
@@ -64,9 +64,9 @@ lib/
 # 1. Clone and install
 npm install
 
-# 2. Set environment variable
-cp .env.local.example .env.local
-# Edit: NEXT_PUBLIC_API_URL=https://your-backend-api.com
+# 2. Set environment variables
+cp .env.example .env
+# Edit values for your local API/site URLs
 
 # 3. Run dev server
 npm run dev
@@ -81,7 +81,30 @@ npm run build && npm start
 
 ```env
 NEXT_PUBLIC_API_URL=https://your-backend-api.com
+NEXT_PUBLIC_SITE_URL=https://your-frontend-site.com
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```
+
+---
+
+## Netlify Deployment
+
+This project includes `netlify.toml` with:
+
+- Build command: `npm run build`
+- Publish directory: `.next`
+- Node version: `20.18.1`
+- Login page header for Google OAuth popups
+
+Set these environment variables in Netlify:
+
+```env
+NEXT_PUBLIC_API_URL=https://your-deployed-api.com/api
+NEXT_PUBLIC_SITE_URL=https://your-netlify-site.netlify.app
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+Deploy the API project separately first, then point `NEXT_PUBLIC_API_URL` to that API domain. For Google sign-in, add your Netlify domain to the Google OAuth allowed origins.
 
 ---
 

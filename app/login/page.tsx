@@ -1,17 +1,51 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
-import { getAccessToken, login } from "@/lib/api";
+import { ArrowLeft, Loader2, Mail, ShoppingBag } from "lucide-react";
+import { ApiRequestError, continueWithGoogle, getAccessToken } from "@/lib/api";
+
+const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+interface GoogleCredentialResponse {
+  credential?: string;
+  select_by?: string;
+}
+
+interface GoogleAccountsId {
+  initialize(options: {
+    client_id: string;
+    callback: (response: GoogleCredentialResponse) => void;
+  }): void;
+  renderButton(
+    parent: HTMLElement,
+    options: {
+      theme?: "outline" | "filled_blue" | "filled_black";
+      size?: "large" | "medium" | "small";
+      text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+      shape?: "rectangular" | "pill" | "circle" | "square";
+      width?: number;
+    }
+  ): void;
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    };
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (getAccessToken()) {
@@ -19,20 +53,96 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  async function submitLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
+  const handleGoogleCredential = useCallback(
+    async (response: GoogleCredentialResponse) => {
+      if (!response.credential) {
+        setNotice("Google did not return a sign-in token. Please try again.");
+        return;
+      }
 
-    try {
-      await login({ email: email.trim(), password });
-      router.replace("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid credentials.");
-    } finally {
-      setIsSubmitting(false);
+      setIsGoogleLoading(true);
+      setNotice("");
+
+      try {
+        await continueWithGoogle({
+          idToken: response.credential,
+        });
+        router.replace("/dashboard");
+      } catch (error) {
+        const message =
+          error instanceof ApiRequestError
+            ? error.message
+            : "Google sign-in failed. Please try again.";
+        setNotice(message);
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) {
+      setNotice("Google sign-in needs NEXT_PUBLIC_GOOGLE_CLIENT_ID in your environment.");
+      return;
     }
-  }
+
+    const clientId = GOOGLE_CLIENT_ID;
+    let cancelled = false;
+
+    function renderGoogleButton() {
+      if (
+        cancelled ||
+        !googleButtonRef.current ||
+        !window.google?.accounts?.id
+      ) {
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential,
+      });
+
+      const target = googleButtonRef.current;
+      target.innerHTML = "";
+      window.google.accounts.id.renderButton(target, {
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "rectangular",
+        width: target.clientWidth || 360,
+      });
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${GOOGLE_SCRIPT_SRC}"]`
+    );
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return;
+    }
+
+    const script = existingScript ?? document.createElement("script");
+    script.src = GOOGLE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = renderGoogleButton;
+    script.onerror = () => {
+      if (!cancelled) {
+        setNotice("Google sign-in could not load. Check your connection and try again.");
+      }
+    };
+
+    if (!existingScript) {
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleGoogleCredential]);
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -72,50 +182,40 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-primary">Seller login</p>
+              <p className="text-sm font-semibold text-primary">Seller access</p>
               <h2 className="font-display mt-2 text-2xl font-bold tracking-tight">
-                Welcome back
+                Sign in or create your seller account
               </h2>
             </div>
 
-            {error && (
-              <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
+            {notice && (
+              <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-zinc-700">
+                {notice}
               </div>
             )}
 
-            <form onSubmit={submitLogin} className="mt-6 space-y-4">
-              <label className="block">
-                <span className="text-xs font-semibold text-zinc-600">Email</span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+            <div className="mt-6 space-y-4">
+              <div className="space-y-3">
+                <div
+                  ref={googleButtonRef}
+                  className={GOOGLE_CLIENT_ID ? "w-full" : "hidden"}
                 />
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-semibold text-zinc-600">Password</span>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Sign in
-              </button>
-            </form>
+                {(!GOOGLE_CLIENT_ID || isGoogleLoading) && (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-900 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isGoogleLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    ) : (
+                      <Mail className="h-4 w-4 text-primary" />
+                    )}
+                    {isGoogleLoading ? "Continuing..." : "Continue with Google"}
+                  </button>
+                )}
+              </div>
+            </div>
           </section>
         </div>
       </div>

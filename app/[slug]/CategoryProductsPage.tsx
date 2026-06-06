@@ -3,10 +3,9 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, SlidersHorizontal, Zap } from "lucide-react";
 import FilterSidebar from "@/components/FilterSidebar";
 import ProductCard from "@/components/ProductCard";
-import ProductDetailModal from "@/components/ProductDetailModal";
 import type { LocationSelection } from "@/components/SearchBar";
 import { useProductCategories, useProducts } from "@/lib/hooks";
 import { filterQueryString, legacyLocationFromQuery, locationPathSlug } from "@/lib/routes";
@@ -31,9 +30,9 @@ export default function CategoryProductsPage({ params }: Props) {
   const [selectedLocation, setSelectedLocation] = useState<LocationSelection | null>(null);
   const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const { products, total, isLoading, isError, error } = useProducts(undefined, {
+  const { products, isLoading, isError, error } = useProducts(undefined, {
     categoryId: category?.id ?? slug,
     search: query,
     city: selectedLocation?.type === "city" ? selectedLocation.city : undefined,
@@ -81,6 +80,14 @@ export default function CategoryProductsPage({ params }: Props) {
     [router, searchParams, selectedLocation]
   );
 
+  const openMarketplaceProduct = useCallback(
+    (product: Product) => {
+      if (!product.store?.slug || !product.slug) return;
+      router.push(`/products/${product.store.slug}/${product.slug}`);
+    },
+    [router]
+  );
+
   useEffect(() => {
     setQuery(searchParams.get("query") || searchParams.get("q") || "");
     const city = searchParams.get("city") || "";
@@ -107,42 +114,88 @@ export default function CategoryProductsPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-white px-4 py-10 text-zinc-950 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center gap-3">
-          <Link
-            href="/"
-            className="rounded-lg border border-primary/20 bg-white p-2 text-zinc-500 transition-colors hover:text-primary"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-zinc-950">
-              {title} products in Nigeria
-            </h1>
-            {!isLoading && !isError && <p className="text-sm text-zinc-500">{total} products</p>}
+        <div className="mb-8 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              className="rounded-lg border border-primary/20 bg-white p-2 text-zinc-500 transition-colors hover:text-primary"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0">
+              <h1 className="font-display text-xl font-bold text-zinc-950 sm:text-2xl">
+                {title} products in Nigeria
+              </h1>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((current) => !current)}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-primary/30 bg-white px-3 text-sm font-semibold text-zinc-800 shadow-sm transition-colors hover:border-primary hover:text-primary lg:hidden"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+            {(selectedLocation || minPrice || maxPrice || category) && (
+              <span className="h-2 w-2 rounded-full bg-primary" />
+            )}
+          </button>
         </div>
 
         <div className="flex gap-10">
-          <FilterSidebar
-            categories={categories}
-            selectedCategory={category?.id ?? slug}
-            selectedLocation={selectedLocation}
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onCategoryChange={handleCategoryChange}
-            onLocationChange={handleLocationChange}
-            onMinPriceChange={(value) => {
-              setMinPrice(value);
-              replaceFilterQuery({ minPrice: value });
-            }}
-            onMaxPriceChange={(value) => {
-              setMaxPrice(value);
-              replaceFilterQuery({ maxPrice: value });
-            }}
-            onClear={() => router.push("/")}
-          />
+          <div className="hidden lg:block">
+            <FilterSidebar
+              categories={categories}
+              selectedCategory={category?.id ?? slug}
+              selectedLocation={selectedLocation}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              onCategoryChange={handleCategoryChange}
+              onLocationChange={handleLocationChange}
+              onMinPriceChange={(value) => {
+                setMinPrice(value);
+                replaceFilterQuery({ minPrice: value });
+              }}
+              onMaxPriceChange={(value) => {
+                setMaxPrice(value);
+                replaceFilterQuery({ maxPrice: value });
+              }}
+              onClear={() => router.push("/")}
+            />
+          </div>
 
           <main className="min-w-0 flex-1">
+            {sidebarOpen && (
+              <div className="mb-6 rounded-xl border border-primary/20 bg-white p-4 shadow-lg lg:hidden">
+                <FilterSidebar
+                  categories={categories}
+                  selectedCategory={category?.id ?? slug}
+                  selectedLocation={selectedLocation}
+                  minPrice={minPrice}
+                  maxPrice={maxPrice}
+                  onCategoryChange={(value) => {
+                    handleCategoryChange(value);
+                    setSidebarOpen(false);
+                  }}
+                  onLocationChange={(value) => {
+                    handleLocationChange(value);
+                    setSidebarOpen(false);
+                  }}
+                  onMinPriceChange={(value) => {
+                    setMinPrice(value);
+                    replaceFilterQuery({ minPrice: value });
+                  }}
+                  onMaxPriceChange={(value) => {
+                    setMaxPrice(value);
+                    replaceFilterQuery({ maxPrice: value });
+                  }}
+                  onClear={() => {
+                    router.push("/");
+                    setSidebarOpen(false);
+                  }}
+                />
+              </div>
+            )}
+
             {isError && (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
                 {error instanceof Error ? error.message : "Unable to load products."}
@@ -150,11 +203,11 @@ export default function CategoryProductsPage({ params }: Props) {
             )}
 
             {isLoading && !isError && (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 9 }).map((_, index) => (
-                  <div key={index} className="overflow-hidden rounded-2xl border border-primary/20 bg-white">
-                    <div className="h-36 skeleton" />
-                    <div className="space-y-3 p-4">
+                  <div key={index} className="overflow-hidden rounded-lg border border-primary/20 bg-white">
+                    <div className="h-28 skeleton" />
+                    <div className="space-y-2 p-3">
                       <div className="h-4 w-3/4 skeleton rounded-full" />
                       <div className="h-3 w-1/2 skeleton rounded-full" />
                     </div>
@@ -164,13 +217,14 @@ export default function CategoryProductsPage({ params }: Props) {
             )}
 
             {!isLoading && !isError && products.length > 0 && (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
                     storePhone={product.store?.phone ?? ""}
-                    onProductClick={setSelectedProduct}
+                    cardStyle="compact"
+                    onProductClick={openMarketplaceProduct}
                   />
                 ))}
               </div>
@@ -193,13 +247,6 @@ export default function CategoryProductsPage({ params }: Props) {
           </main>
         </div>
       </div>
-
-      <ProductDetailModal
-        product={selectedProduct}
-        storePhone={selectedProduct?.store?.phone ?? ""}
-        primaryColor="green"
-        onClose={() => setSelectedProduct(null)}
-      />
     </div>
   );
 }

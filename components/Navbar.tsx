@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, ShoppingBag, X } from "lucide-react";
+import { Menu, Search, ShoppingBag, UserPlus, X } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -59,42 +59,57 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 sm:inline-flex"
+            className="hidden items-center justify-center rounded-lg border border-primary/30 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/5 sm:inline-flex"
           >
-            Login
+            Sign in
           </Link>
-          {showSearch && (
-            <button
-              type="button"
-              onClick={() => setOpen(!open)}
-              className="rounded-lg border border-primary/20 bg-primary/10 p-2 text-zinc-600 transition-colors hover:text-primary sm:hidden"
-              aria-label="Toggle search"
-            >
-              {open ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-            </button>
-          )}
+          <Link
+            href="/login"
+            className="hidden items-center justify-center rounded-lg border border-primary bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 sm:inline-flex"
+          >
+            Register
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="rounded-lg border border-primary/20 bg-white p-2 text-zinc-700 transition-colors hover:border-primary/40 hover:text-primary sm:hidden"
+            aria-label={open ? "Close menu" : "Open menu"}
+          >
+            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
       </nav>
 
-      {showSearch && open && (
+      {open && (
         <div className="border-t border-primary/20 bg-white px-4 py-4 sm:hidden">
-          <form onSubmit={submitSearch}>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search products..."
-                className="h-10 w-full rounded-lg border border-primary/20 bg-primary/10 pl-9 pr-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-primary/30 focus:bg-white focus:ring-4 focus:ring-primary/10"
-              />
-            </div>
-          </form>
-          <Link
-            href="/login"
-            className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90"
-          >
-            Login
-          </Link>
+          {showSearch && (
+            <form onSubmit={submitSearch}>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search products..."
+                  className="h-10 w-full rounded-lg border border-primary/20 bg-primary/10 pl-9 pr-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-primary/30 focus:bg-white focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+            </form>
+          )}
+          <div className={showSearch ? "mt-3 grid grid-cols-2 gap-3" : "grid grid-cols-2 gap-3"}>
+            <Link
+              href="/login"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-primary/30 bg-white px-4 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/5"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+            >
+              <UserPlus className="h-4 w-4" />
+              Register
+            </Link>
+          </div>
         </div>
       )}
     </header>
