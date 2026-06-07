@@ -91,6 +91,17 @@ function valueAsBoolean(value: unknown, fallback = false) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function normalizeProductCondition(value: unknown) {
+  const condition = valueAsString(value).trim().toLowerCase();
+
+  if (!condition) return null;
+  if (condition === "new" || condition === "brand new") return "NEW";
+  if (condition === "refurbished") return "REFURBISHED";
+  if (condition.startsWith("used")) return "USED";
+
+  return null;
+}
+
 function payloadMessage(payload: unknown): string | null {
   if (typeof payload === "string" && payload.trim()) return payload;
   if (!isRecord(payload)) return null;
@@ -336,7 +347,7 @@ export function normalizeProduct(input: unknown): Product {
     slug: valueAsString(source.slug),
     description: valueAsString(source.description) || null,
     price: valueAsNumber(source.price),
-    condition: valueAsString(source.condition) || null,
+    condition: normalizeProductCondition(source.condition),
     currency: valueAsString(source.currency, "NGN"),
     images,
     imageUrl: valueAsString(source.imageUrl) || images[0] || null,
@@ -979,4 +990,11 @@ export function formatPrice(price: number, currency = "NGN"): string {
     currency,
     minimumFractionDigits: 0,
   }).format(price);
+}
+
+export function formatProductCondition(condition?: string | null) {
+  if (condition === "NEW") return "New";
+  if (condition === "USED") return "Used";
+  if (condition === "REFURBISHED") return "Refurbished";
+  return condition || "";
 }

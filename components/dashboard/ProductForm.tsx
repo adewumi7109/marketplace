@@ -2,12 +2,13 @@
 
 import { FormEvent } from "react";
 import { Loader2, Plus } from "lucide-react";
-import type { ProductCategory, Store } from "@/lib/types";
+import type { ProductCategory, ProductCondition, Store } from "@/lib/types";
 
 export type ProductFormState = {
   name: string;
   description: string;
   price: string;
+  condition: ProductCondition | "";
   categoryId: string;
 };
 
@@ -25,6 +26,7 @@ export const initialProductForm: ProductFormState = {
   name: "",
   description: "",
   price: "",
+  condition: "",
   categoryId: "",
 };
 
@@ -94,6 +96,27 @@ export default function ProductForm({
                 {category.name}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold text-zinc-600">Product condition</span>
+          <select
+            required
+            value={form.condition}
+            onChange={(event) =>
+              onChange({
+                ...form,
+                condition: event.target.value as ProductCondition | "",
+              })
+            }
+            disabled={!selectedStore}
+            className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+          >
+            <option value="">Select condition</option>
+            <option value="NEW">New</option>
+            <option value="USED">Used</option>
+            <option value="REFURBISHED">Refurbished</option>
           </select>
         </label>
 

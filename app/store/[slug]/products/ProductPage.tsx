@@ -17,6 +17,7 @@ import { formatPrice, getStoreProductBySlug } from "@/lib/api";
 import { ProductViewTracker } from "@/components/ProductEngagement";
 import ProductShareLinks from "@/components/ProductShareLinks";
 import ProductImageGallery from "@/components/ProductImageGallery";
+import ProductOrderButton from "@/components/ProductOrderButton";
 import {
   absoluteUrl,
   getSiteUrl,
@@ -223,14 +224,6 @@ export default async function StoreProductPage({ params }: Props) {
                   </dd>
                 </div>
               )}
-              {product.condition && (
-                <div className="flex justify-between gap-4 border-b border-zinc-100 pb-4">
-                  <dt className="text-zinc-500">Condition</dt>
-                  <dd className="text-right font-semibold text-zinc-950">
-                    {product.condition}
-                  </dd>
-                </div>
-              )}
               {place && (
                 <div className="flex justify-between gap-4">
                   <dt className="inline-flex items-center gap-1 text-zinc-500">
@@ -244,14 +237,12 @@ export default async function StoreProductPage({ params }: Props) {
           </div>
 
           {product.inStock !== false && (
-            <button
-              type="button"
+            <ProductOrderButton
+              product={product}
+              storePhone={store.phone}
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              Order
-            </button>
+              primaryColor={primaryColor}
+            />
           )}
 
           <ProductShareLinks title={product.name} url={canonical} className="mt-6" />

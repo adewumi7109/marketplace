@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ShoppingBag, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatPrice, getProduct, trackProductView } from "@/lib/api";
+import ProductOrderButton from "@/components/ProductOrderButton";
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -186,12 +187,6 @@ export default function ProductDetailModal({
             )}
 
             <div className="mt-6 space-y-3 border-t border-zinc-200 pt-5 text-sm text-zinc-600">
-              {detail.condition && (
-                <div className="flex justify-between gap-4">
-                  <span>Condition</span>
-                  <strong className="font-medium text-zinc-900">{detail.condition}</strong>
-                </div>
-              )}
               {detail.store?.name && (
                 <div className="flex justify-between gap-4">
                   <span>Store</span>
@@ -201,14 +196,12 @@ export default function ProductDetailModal({
             </div>
 
             {detail.inStock !== false && (
-              <button
-                type="button"
+              <ProductOrderButton
+                product={detail}
+                storePhone={storePhone}
                 className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Order
-              </button>
+                primaryColor={primaryColor}
+              />
             )}
           </div>
         </div>

@@ -1,7 +1,9 @@
 import Image from "next/image";
-import { Percent, Box, Check, X, MapPin, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import { Percent, Box, MapPin, Clock3, BadgeCheck } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { formatPrice } from "@/lib/api";
+import { formatPrice, formatProductCondition } from "@/lib/api";
+import ProductOrderButton from "@/components/ProductOrderButton";
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +16,7 @@ interface ProductCardProps {
   showInStock?: boolean;
   showWhatsapp?: boolean;
   showLocation?: boolean;
+  showCondition?: boolean;
   primaryColor?: string;
   onProductClick?: (product: Product) => void;
   onProductPrefetch?: (product: Product) => void;
@@ -30,10 +33,12 @@ export default function ProductCard({
   showInStock = true,
   showWhatsapp = true,
   showLocation = true,
+  showCondition = false,
   primaryColor,
   onProductClick,
   onProductPrefetch,
 }: ProductCardProps) {
+  const [isOpening, setIsOpening] = useState(false);
   const price = formatPrice(product.price, product.currency);
 
   const imageUrl = product.imageUrl || product.images?.[0] || null;
@@ -60,59 +65,10 @@ export default function ProductCard({
     .filter((part): part is string => Boolean(part))
     .join(", ");
 
-  const openProduct = () => onProductClick?.(product);
-
-  const OrderButton = ({ className = "" }: { className?: string }) => (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        openProduct();
-      }}
-      className={`inline-flex items-center justify-center gap-1 rounded-md bg-primary font-semibold text-white transition hover:bg-primary/90 ${
-        isCompact ? "px-2 py-1 text-[10px]" : "px-2 py-1.5 text-[11px] sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs"
-      } ${className}`}
-      style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-    >
-      <ShoppingBag className={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"} />
-      Order
-    </button>
-  );
-
-  const Badges = () => {
-    if (!showBadges || !discount) return null;
-
-    return (
-      <div className="absolute left-2 top-2 z-10">
-        <span
-          className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-bold text-white"
-          style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-        >
-          <Percent className="h-3 w-3" />
-          {discount}% off
-        </span>
-      </div>
-    );
-  };
-
-  const StockIndicator = () => {
-    if (!showInStock) return null;
-
-    if (product.inStock === false) {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600">
-          <X className="h-3 w-3" />
-          Out of stock
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-        <Check className="h-3 w-3" />
-        In stock
-      </span>
-    );
+  const openProduct = () => {
+    if (!onProductClick) return;
+    setIsOpening(true);
+    onProductClick(product);
   };
 
   const imageBoxClass =
@@ -145,7 +101,7 @@ export default function ProductCard({
           openProduct();
         }
       }}
-      className={`group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md ${
+      className={`group relative overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md ${
         isList ? "flex gap-4 p-3" : ""
       } ${onProductClick ? "cursor-pointer" : ""} ${className}`}
     >
@@ -171,7 +127,17 @@ export default function ProductCard({
           </div>
         )}
 
-        <Badges />
+        {showBadges && discount && (
+          <div className="absolute left-2 top-2 z-10">
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-bold text-white"
+              style={primaryColor ? { backgroundColor: primaryColor } : undefined}
+            >
+              <Percent className="h-3 w-3" />
+              {discount}% off
+            </span>
+          </div>
+        )}
       </div>
 
       {/* CONTENT */}
@@ -216,6 +182,17 @@ export default function ProductCard({
               <span className="truncate">{locationLabel}</span>
             </p>
           )}
+
+          {showCondition && product.condition && (
+            <p
+              className={`mt-2 inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-1 font-semibold text-zinc-600 ${
+                isCompact ? "text-[10px]" : "text-[11px] sm:text-xs"
+              }`}
+            >
+              <BadgeCheck className="h-3 w-3" />
+              {formatProductCondition(product.condition)}
+            </p>
+          )}
         </div>
 
         {/* FOOTER */}
@@ -239,10 +216,29 @@ export default function ProductCard({
            
           </div>
 
-          {showWhatsapp &&
-            product.inStock !== false && <OrderButton />}
+          {showWhatsapp && product.inStock !== false && (
+            <ProductOrderButton
+              product={product}
+              storePhone={storePhone}
+              className={`inline-flex items-center justify-center gap-1 rounded-md bg-primary font-semibold text-white transition hover:bg-primary/90 ${
+                isCompact
+                  ? "px-2 py-1 text-[10px]"
+                  : "px-2 py-1.5 text-[11px] sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs"
+              }`}
+              iconClassName={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"}
+              primaryColor={primaryColor}
+            />
+          )}
         </div>
       </div>
+
+      {isOpening && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-md ring-1 ring-zinc-200">
+            <Clock3 className="h-5 w-5 animate-spin" />
+          </span>
+        </div>
+      )}
     </article>
   );
 }

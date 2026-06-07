@@ -3,12 +3,17 @@ import "./globals.css";
 import AppChrome from "@/components/AppChrome";
 
 export const metadata: Metadata = {
-  title: "MarktPlace - Discover Local Stores",
+  title: "Kombomart - Discover Local Stores",
   description:
     "Browse and order from the best local stores near you. Fashion, food, electronics, and more.",
-  keywords: ["marketplace", "stores", "local", "Nigeria", "shopping"],
+  keywords: ["kombomart", "marketplace", "stores", "local", "Nigeria", "shopping"],
+  icons: {
+    icon: "/logoo.png",
+    shortcut: "/logoo.png",
+    apple: "/logoo.png",
+  },
   openGraph: {
-    title: "MarktPlace",
+    title: "Kombomart",
     description: "Discover and shop from local stores",
     type: "website",
   },

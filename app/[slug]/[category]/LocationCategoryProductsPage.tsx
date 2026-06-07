@@ -249,6 +249,7 @@ export default function LocationCategoryProductsPage({ params }: Props) {
                     product={product}
                     storePhone={product.store?.phone ?? ""}
                     cardStyle="compact"
+                    showCondition
                     onProductClick={openMarketplaceProduct}
                     onProductPrefetch={prefetchMarketplaceProduct}
                   />

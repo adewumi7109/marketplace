@@ -25,10 +25,11 @@ import {
   getAccessToken,
   updateProduct,
   updateStore,
+  formatProductCondition,
 } from "@/lib/api";
 import { useCategories, useLocations, useMe, useProductCategories, useSellerAnalytics, useSellerProducts, useTemplates } from "@/lib/hooks";
 import { storeProductPath } from "@/lib/productRoutes";
-import type { Location, Product, Store } from "@/lib/types";
+import type { Location, Product, ProductCondition, Store } from "@/lib/types";
 import MetricCard from "./MetricCard";
 import SellerSidebar, { type DashboardView } from "./SellerSidebar";
 
@@ -36,6 +37,7 @@ type ProductFormState = {
   name: string;
   description: string;
   price: string;
+  condition: ProductCondition | "";
   categoryId: string;
   marketplaceCategoryId: string;
   locationId: string;
@@ -68,6 +70,7 @@ const initialProductForm: ProductFormState = {
   name: "",
   description: "",
   price: "",
+  condition: "",
   categoryId: "",
   marketplaceCategoryId: "",
   locationId: "",
@@ -77,6 +80,14 @@ const initialProductForm: ProductFormState = {
   images: [],
   pushToMarketplace: false,
 };
+
+const MAX_PRODUCT_IMAGE_SIZE = 4 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_COUNT = 3;
+const PRODUCT_IMAGE_MAX_DIMENSION = 1600;
+
+function productImageSizeLabel(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 function toStoreSlug(value: string) {
   return value
@@ -125,6 +136,7 @@ function productPayload(
     name: form.name.trim(),
     description: form.description.trim(),
     price: Number(form.price),
+    condition: form.condition as ProductCondition,
     ...(form.categoryId ? { categoryId: form.categoryId } : {}),
     inStock: true,
     pushToMarketplace: form.pushToMarketplace,
@@ -169,6 +181,56 @@ function uniqueSorted(values: Array<string | null | undefined>) {
 
 function sameText(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Unable to compress image."));
+      },
+      type,
+      quality
+    );
+  });
+}
+
+async function compressProductImage(file: File) {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml" || file.type === "image/gif") {
+    if (file.size <= MAX_PRODUCT_IMAGE_SIZE) return file;
+    throw new Error(`${file.name} is ${productImageSizeLabel(file.size)}. Upload images must be 4MB or smaller.`);
+  }
+
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, PRODUCT_IMAGE_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    bitmap.close();
+    throw new Error("Unable to compress image.");
+  }
+
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob = await canvasToBlob(canvas, "image/jpeg", 0.78);
+  if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
+    throw new Error(`${file.name} could not be compressed below 4MB. Please choose a smaller image.`);
+  }
+
+  if (file.size <= MAX_PRODUCT_IMAGE_SIZE && blob.size >= file.size) {
+    return file;
+  }
+
+  const compressedName = file.name.replace(/\.[^.]+$/, "") || "product-image";
+  return new File([blob], `${compressedName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
 }
 
 export default function DashboardClient({
@@ -430,6 +492,7 @@ export default function DashboardClient({
       name: product.name,
       description: product.description || "",
       price: String(product.price || ""),
+      condition: product.condition || "",
       categoryId: product.categoryId || "",
       marketplaceCategoryId: product.marketplaceCategoryId || "",
       locationId: product.locationId || selectedStore?.locationId || selectedStore?.locationData?.id || "",
@@ -491,6 +554,19 @@ export default function DashboardClient({
     });
   }
 
+  async function handleProductImageChange(files: FileList | null) {
+    setError("");
+    const selectedFiles = Array.from(files ?? []).slice(0, MAX_PRODUCT_IMAGE_COUNT);
+
+    try {
+      const compressedImages = await Promise.all(selectedFiles.map(compressProductImage));
+      setProductForm({ ...productForm, images: compressedImages });
+    } catch (err) {
+      setProductForm({ ...productForm, images: [] });
+      setError(err instanceof Error ? err.message : "Unable to prepare product images.");
+    }
+  }
+
   async function addProductCategory() {
     if (!selectedStore?.id || !newCategoryName.trim()) return;
 
@@ -522,6 +598,7 @@ export default function DashboardClient({
       !selectedStore?.id ||
       !productForm.name.trim() ||
       !productForm.price ||
+      !productForm.condition ||
       (productForm.pushToMarketplace && !productForm.marketplaceCategoryId)
     ) return;
 
@@ -798,7 +875,7 @@ export default function DashboardClient({
                                   <div className="min-w-0">
                                     <p className="truncate font-semibold text-zinc-950">{product.name}</p>
                                     <p className="mt-1 truncate text-xs text-zinc-500">
-                                      {product.category || "Uncategorized"}
+                                      {[product.category || "Uncategorized", formatProductCondition(product.condition)].filter(Boolean).join(" • ")}
                                     </p>
                                   </div>
                                 </div>
@@ -880,6 +957,42 @@ export default function DashboardClient({
 
               {(productMode === "form" || editingProduct) && (
               <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-display text-lg font-bold tracking-tight">Add store category</h2>
+                  <p className="text-xs leading-5 text-zinc-500">
+                    Store categories appear on your store page. Marketplace visibility is still controlled per product.
+                  </p>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <input
+                    value={newCategoryName}
+                    onChange={(event) => setNewCategoryName(event.target.value)}
+                    disabled={!selectedStore || isSavingCategory}
+                    placeholder="e.g. New arrivals"
+                    className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={addProductCategory}
+                    disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
+                    className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 px-3 text-xs font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+                  </button>
+                </div>
+                <textarea
+                  rows={2}
+                  value={newCategoryDescription}
+                  onChange={(event) => setNewCategoryDescription(event.target.value)}
+                  disabled={!selectedStore || isSavingCategory}
+                  placeholder="Short category description"
+                  className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                />
+              </section>
+              )}
+
+              {(productMode === "form" || editingProduct) && (
+              <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h2 className="font-display text-lg font-bold tracking-tight">
@@ -940,37 +1053,26 @@ export default function DashboardClient({
                     </select>
                   </label>
 
-                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                    <span className="text-xs font-semibold text-zinc-700">Add store category</span>
-                    <div className="mt-2 flex gap-2">
-                      <input
-                        value={newCategoryName}
-                        onChange={(event) => setNewCategoryName(event.target.value)}
-                        disabled={!selectedStore || isSavingCategory}
-                        placeholder="e.g. New arrivals"
-                        className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                      />
-                      <button
-                        type="button"
-                        onClick={addProductCategory}
-                        disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
-                        className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 px-3 text-xs font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
-                      </button>
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={newCategoryDescription}
-                      onChange={(event) => setNewCategoryDescription(event.target.value)}
-                      disabled={!selectedStore || isSavingCategory}
-                      placeholder="Short category description"
-                      className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                    />
-                    <p className="mt-2 text-xs leading-5 text-zinc-500">
-                      Store categories appear on your store page. Marketplace visibility is still controlled per product.
-                    </p>
-                  </div>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600">Product condition</span>
+                    <select
+                      value={productForm.condition}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          condition: event.target.value as ProductCondition | "",
+                        })
+                      }
+                      required
+                      disabled={!selectedStore}
+                      className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    >
+                      <option value="">Select condition</option>
+                      <option value="NEW">New</option>
+                      <option value="USED">Used</option>
+                      <option value="REFURBISHED">Refurbished</option>
+                    </select>
+                  </label>
 
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                     <div className="flex items-start justify-between gap-3">
@@ -1065,15 +1167,12 @@ export default function DashboardClient({
                       type="file"
                       accept="image/*"
                       multiple
-                      onChange={(event) => {
-                        const files = Array.from(event.target.files ?? []).slice(0, 3);
-                        setProductForm({ ...productForm, images: files });
-                      }}
+                      onChange={(event) => void handleProductImageChange(event.target.files)}
                       disabled={!selectedStore}
                       className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
                     />
                     <span className="mt-1 block text-xs text-zinc-500">
-                      Upload up to 3 images.
+                      Upload up to 3 images. Each image is compressed in your browser before upload and must finish under 4MB.
                     </span>
                     {productForm.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1144,6 +1243,7 @@ export default function DashboardClient({
                       !selectedStore ||
                       isSavingProduct ||
                       !productForm.price ||
+                      !productForm.condition ||
                       (productForm.pushToMarketplace && !productForm.marketplaceCategoryId)
                     }
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"

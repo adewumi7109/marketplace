@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -6,18 +5,18 @@ import { cache } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
-  Box,
   CheckCircle2,
   Eye,
   MapPin,
-  ShoppingBag,
   Store,
   Tag,
   XCircle,
 } from "lucide-react";
 import { ProductViewTracker } from "@/components/ProductEngagement";
 import ProductShareLinks from "@/components/ProductShareLinks";
-import { formatPrice, getStoreProductBySlug } from "@/lib/api";
+import ProductImageGallery from "@/components/ProductImageGallery";
+import ProductOrderButton from "@/components/ProductOrderButton";
+import { formatPrice, formatProductCondition, getStoreProductBySlug } from "@/lib/api";
 import { getSiteUrl } from "@/lib/storefront";
 import { productCategorySegment } from "@/lib/productRoutes";
 
@@ -71,7 +70,6 @@ export default async function MarketplaceProductPage({ params }: Props) {
 
   const store = product.store;
   const images = imagesFor(product);
-  const mainImage = images[0] || null;
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
   const canonical = `${getSiteUrl()}/products/${storeSlug}/${productCategorySegment(product)}/${product.slug || product.id}`;
@@ -103,33 +101,7 @@ export default async function MarketplaceProductPage({ params }: Props) {
       </section>
 
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:py-12">
-        <div className="space-y-3">
-          <div className="relative aspect-square overflow-hidden rounded-xl border border-primary/15 bg-zinc-50">
-            {mainImage ? (
-              <Image
-                src={mainImage}
-                alt={product.name}
-                fill
-                priority
-                sizes="(min-width: 1024px) 55vw, 100vw"
-                className="object-contain p-4"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-zinc-300">
-                <Box className="h-16 w-16" />
-              </div>
-            )}
-          </div>
-          {images.length > 1 && (
-            <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-              {images.slice(0, 6).map((image, index) => (
-                <div key={`${image}-${index}`} className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-white">
-                  <Image src={image} alt={`${product.name} ${index + 1}`} fill sizes="120px" className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductImageGallery images={images} name={product.name} />
 
         <aside className="lg:pt-2">
           <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-600">
@@ -147,6 +119,11 @@ export default async function MarketplaceProductPage({ params }: Props) {
               <Eye className="h-3.5 w-3.5 text-zinc-500" />
               {(product.viewCount ?? 0).toLocaleString()} views
             </span>
+            {product.condition && (
+              <span className="rounded-full bg-zinc-100 px-3 py-1">
+                {formatProductCondition(product.condition)}
+              </span>
+            )}
           </div>
 
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{product.name}</h1>
@@ -174,13 +151,11 @@ export default async function MarketplaceProductPage({ params }: Props) {
           )}
 
           {product.inStock !== false && (
-            <button
-              type="button"
+            <ProductOrderButton
+              product={product}
+              storePhone={store?.phone}
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              Order
-            </button>
+            />
           )}
 
           <ProductShareLinks title={product.name} url={canonical} className="mt-6" />

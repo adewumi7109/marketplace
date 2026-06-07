@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   BarChart3,
@@ -8,7 +9,6 @@ import {
   LogOut,
   Package,
   Settings,
-  Store as StoreIcon,
 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 
@@ -51,15 +51,21 @@ export default function SellerSidebar({
       <div className="flex w-full flex-col">
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
-              <StoreIcon className="h-5 w-5" />
+            <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+              <Image
+                src="/logoo.png"
+                alt="Kombomart"
+                fill
+                sizes="40px"
+                className="object-contain"
+                priority
+              />
             </span>
             {!collapsed && (
               <span className="min-w-0">
                 <span className="block truncate font-display text-lg font-bold tracking-tight">
-                  Seller Desk
+                  Seller dashboard
                 </span>
-                <span className="block truncate text-xs text-zinc-500">Storefront commerce</span>
               </span>
             )}
           </Link>

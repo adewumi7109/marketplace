@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Search, ShoppingBag, UserPlus, X } from "lucide-react";
+import { Menu, Search, UserPlus, X } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -34,11 +35,18 @@ export default function Navbar() {
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-primary/20 bg-white/90 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <ShoppingBag className="h-4 w-4 text-white" />
+          <span className="relative h-9 w-9 overflow-hidden rounded-lg">
+            <Image
+              src="/logoo.png"
+              alt="Kombomart"
+              fill
+              sizes="36px"
+              className="object-contain"
+              priority
+            />
           </span>
           <span className="font-display text-xl font-bold tracking-tight text-zinc-950">
-            Markt<span className="text-primary">Place</span>
+            Kombo<span className="text-accent">mart</span>
           </span>
         </Link>
 

@@ -7,6 +7,7 @@
     --font-display: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
     --font-body: "Segoe UI", Arial, system-ui, sans-serif;
     --primary-color: #10B981;
+    --accent-color: #f47701;
     --loader-color: var(--primary-color);
   }
 

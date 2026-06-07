@@ -179,15 +179,15 @@ useEffect(() => {
   {/* Content */}
   <div className="relative mx-auto max-w-7xl flex items-center justify-between px-4 py-16 sm:px-6 md:py-10">
     <div className="max-w-2xl">
-      <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-3 py-1.5 text-xs font-medium text-primary shadow-sm backdrop-blur">
-        <Zap className="h-3 w-3" />
+      <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-white/85 px-3 py-1.5 text-xs font-medium text-primary shadow-sm backdrop-blur">
+        <Zap className="h-3 w-3 text-accent" />
         Nigeria&apos;s fastest-growing product marketplace
       </div>
 
       <h1 className="font-display mb-5 text-balance text-2xl font-black leading-[1.05] tracking-tight text-white md:text-5xl">
         Discover local
         <br />
-        <span className="text-black">products near you</span>
+        <span className="text-accent">products near you</span>
       </h1>
 
       <p className="mb-8 max-w-lg text-lg text-white/80">
@@ -207,7 +207,7 @@ useEffect(() => {
           <button
             key={item}
             onClick={() => router.push(`/${slugify(item)}`)}
-            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white/80 shadow-sm transition-all hover:bg-white/20 hover:text-white"
+            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white/80 shadow-sm transition-all hover:border-accent/60 hover:bg-white/20 hover:text-white"
           >
             {item}
           </button>
@@ -365,6 +365,7 @@ useEffect(() => {
                         variant={variant}
                         cardStyle="compact"
                         showInStock={variant !== "fashion"}
+                        showCondition
                         onProductClick={openProduct}
                         onProductPrefetch={prefetchProduct}
                       />

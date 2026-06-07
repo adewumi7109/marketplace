@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Mail, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { ApiRequestError, continueWithGoogle, getAccessToken } from "@/lib/api";
 
 const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
@@ -158,8 +159,15 @@ export default function LoginPage() {
             </Link>
 
             <div>
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
-                <ShoppingBag className="h-6 w-6" />
+              <div className="relative mb-5 h-14 w-14 overflow-hidden rounded-xl">
+                <Image
+                  src="/logoo.png"
+                  alt="Kombomart"
+                  fill
+                  sizes="56px"
+                  className="object-contain"
+                  priority
+                />
               </div>
               <h1 className="font-display max-w-md text-4xl font-bold leading-tight tracking-tight">
                 Sign in to manage your stores and products.
@@ -182,6 +190,16 @@ export default function LoginPage() {
             </div>
 
             <div>
+              <div className="relative mb-5 h-12 w-12 overflow-hidden rounded-xl lg:hidden">
+                <Image
+                  src="/logoo.png"
+                  alt="Kombomart"
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <p className="text-sm font-semibold text-primary">Seller access</p>
               <h2 className="font-display mt-2 text-2xl font-bold tracking-tight">
                 Sign in or create your seller account

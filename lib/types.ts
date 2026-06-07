@@ -51,6 +51,8 @@ export interface ProductLocation {
 
 export type Location = ProductLocation;
 
+export type ProductCondition = "NEW" | "USED" | "REFURBISHED";
+
 export interface Template {
   id?: string;
   name: string;
@@ -107,7 +109,7 @@ export interface Product {
   description?: string | null;
   price: number;
   comparePrice?: number;
-  condition?: string | null;
+  condition?: ProductCondition | null;
   currency?: string;
   images?: string[];
   imageUrl?: string | null;
@@ -199,6 +201,7 @@ export interface CreateProductInput {
   name: string;
   description?: string;
   price: number;
+  condition: ProductCondition;
   images?: string[];
   inStock?: boolean;
   isNegotiable?: boolean;
