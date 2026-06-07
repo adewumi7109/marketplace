@@ -4,9 +4,10 @@
 
 [build.environment]
   NODE_VERSION = "20.18.1"
+  NEXT_PUBLIC_API_URL = "https://marketplaceapi1.netlify.app/api"
+  NEXT_PUBLIC_SITE_URL = "https://marktplace-test.netlify.app"
 
 [[headers]]
   for = "/login"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
-

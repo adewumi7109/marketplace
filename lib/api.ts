@@ -27,7 +27,8 @@ import type {
   UserProfile,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://marketplaceapi1.netlify.app/api";
 const TOKEN_STORAGE_KEY = "marketplace_access_token";
 
 type ApiFetchOptions = RequestInit & {
