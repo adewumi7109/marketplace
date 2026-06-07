@@ -10,8 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Syne'", "sans-serif"],
-        body: ["'DM Sans'", "sans-serif"],
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
         mono: ["'JetBrains Mono'", "monospace"],
       },
       colors: {

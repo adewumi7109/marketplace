@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --font-display: 'Syne', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
+    --font-display: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Segoe UI", Arial, system-ui, sans-serif;
     --primary-color: #10B981;
     --loader-color: var(--primary-color);
   }

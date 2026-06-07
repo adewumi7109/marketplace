@@ -1,19 +1,6 @@
 import type { Metadata } from "next";
-import { Syne, DM_Sans } from "next/font/google";
 import "./globals.css";
 import AppChrome from "@/components/AppChrome";
-
-const syne = Syne({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "600", "700", "800"],
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["300", "400", "500", "600"],
-});
 
 export const metadata: Metadata = {
   title: "MarktPlace - Discover Local Stores",
@@ -36,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${syne.variable} ${dmSans.variable} font-body bg-white text-zinc-950 antialiased`}
+        className="font-body bg-white text-zinc-950 antialiased"
       >
         <AppChrome>{children}</AppChrome>
       </body>
