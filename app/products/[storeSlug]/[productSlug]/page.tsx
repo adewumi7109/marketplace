@@ -9,13 +9,15 @@ import {
   CheckCircle2,
   Eye,
   MapPin,
-  MessageCircle,
+  ShoppingBag,
   Store,
   Tag,
   XCircle,
 } from "lucide-react";
-import { ProductViewTracker, WhatsAppOrderButton } from "@/components/ProductEngagement";
-import { buildWhatsAppLink, formatPrice, getStoreProductBySlug } from "@/lib/api";
+import { ProductViewTracker } from "@/components/ProductEngagement";
+import ProductShareLinks from "@/components/ProductShareLinks";
+import { formatPrice, getStoreProductBySlug } from "@/lib/api";
+import { getSiteUrl } from "@/lib/storefront";
 
 export const dynamic = "force-dynamic";
 
@@ -64,13 +66,7 @@ export default async function MarketplaceProductPage({ params }: Props) {
   const mainImage = images[0] || null;
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
-  const whatsappLink = buildWhatsAppLink(
-    store?.phone || "",
-    product.name,
-    product.price,
-    product.currency,
-    product.whatsappOrderLink
-  );
+  const canonical = `${getSiteUrl()}/products/${storeSlug}/${product.slug || product.id}`;
 
   return (
     <div className="min-h-screen bg-white text-zinc-950">
@@ -169,25 +165,17 @@ export default async function MarketplaceProductPage({ params }: Props) {
             </div>
           )}
 
-          {product.inStock !== false && store?.phone && (
-            <WhatsAppOrderButton
-              productId={product.id}
-              href={whatsappLink}
+          {product.inStock !== false && (
+            <button
+              type="button"
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
-            />
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Order
+            </button>
           )}
 
-          {store?.phone && product.inStock === false && (
-            <a
-              href={`https://wa.me/${store.phone.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-white px-5 text-sm font-bold text-primary transition hover:bg-primary/5"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Ask seller
-            </a>
-          )}
+          <ProductShareLinks title={product.name} url={canonical} className="mt-6" />
         </aside>
       </main>
     </div>

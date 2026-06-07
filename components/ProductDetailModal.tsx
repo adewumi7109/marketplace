@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, MessageCircle, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingBag, X } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { buildWhatsAppLink, formatPrice, getProduct, trackProductView, trackProductWhatsAppClick } from "@/lib/api";
+import { formatPrice, getProduct, trackProductView } from "@/lib/api";
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -82,13 +82,6 @@ export default function ProductDetailModal({
   if (!product || !detail) return null;
 
   const price = formatPrice(detail.price, detail.currency);
-  const whatsappLink = buildWhatsAppLink(
-    detail.store?.phone || storePhone,
-    detail.name,
-    detail.price,
-    detail.currency,
-    detail.whatsappOrderLink
-  );
 
   const moveImage = (direction: 1 | -1) => {
     if (images.length < 2) return;
@@ -208,19 +201,14 @@ export default function ProductDetailModal({
             </div>
 
             {detail.inStock !== false && (
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  trackProductWhatsAppClick(detail.id).catch(() => undefined);
-                }}
+              <button
+                type="button"
                 className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 style={{ backgroundColor: primaryColor }}
               >
-                <MessageCircle className="h-4 w-4" />
-                Order on WhatsApp
-              </a>
+                <ShoppingBag className="h-4 w-4" />
+                Order
+              </button>
             )}
           </div>
         </div>

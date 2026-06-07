@@ -262,10 +262,10 @@ export function useCategories() {
   };
 }
 
-export function useProductCategories() {
+export function useProductCategories(storeId?: string) {
   const { data, error, isLoading, mutate } = useSWR<ProductCategory[]>(
-    "/api/categories/products",
-    getProductCategories
+    `/api/categories/products${storeId ? `?storeId=${storeId}` : ""}`,
+    () => getProductCategories(storeId)
   );
 
   return {

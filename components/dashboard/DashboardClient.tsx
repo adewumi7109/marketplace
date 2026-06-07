@@ -9,7 +9,6 @@ import {
   Edit3,
   Eye,
   Loader2,
-  MessageCircle,
   Package,
   Plus,
   Search,
@@ -19,6 +18,7 @@ import {
   checkStoreSlug,
   clearAccessToken,
   createSellerProduct,
+  createProductCategory,
   createStore,
   deleteProduct,
   formatPrice,
@@ -36,11 +36,13 @@ type ProductFormState = {
   description: string;
   price: string;
   categoryId: string;
+  marketplaceCategoryId: string;
   locationId: string;
   state: string;
   city: string;
   country: string;
   images: File[];
+  pushToMarketplace: boolean;
 };
 
 type SettingsFormState = {
@@ -53,7 +55,8 @@ type SettingsFormState = {
   locationId: string;
   country: string;
   description: string;
-  messageTemplate: string;
+  storeAddress: string;
+  bannerText: string;
   logo: File | null;
   banner: File | null;
 };
@@ -65,18 +68,14 @@ const initialProductForm: ProductFormState = {
   description: "",
   price: "",
   categoryId: "",
+  marketplaceCategoryId: "",
   locationId: "",
   state: "",
   city: "",
   country: "Nigeria",
   images: [],
+  pushToMarketplace: false,
 };
-
-const defaultMessageTemplate = "I want to buy {product}";
-
-function cleanPhone(phone?: string) {
-  return (phone || "").replace(/\D/g, "");
-}
 
 function toStoreSlug(value: string) {
   return value
@@ -90,11 +89,6 @@ function isHexColor(value: string) {
   return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 }
 
-function whatsappLink(phone: string | undefined, productName: string, template = defaultMessageTemplate) {
-  const text = template.replace("{product}", productName).trim() || `I want to buy ${productName}`;
-  return `https://wa.me/${cleanPhone(phone)}?text=${encodeURIComponent(text)}`;
-}
-
 function emptySettings(store?: Store): SettingsFormState {
   return {
     name: store?.name || "",
@@ -106,7 +100,8 @@ function emptySettings(store?: Store): SettingsFormState {
     locationId: store?.locationId || store?.locationData?.id || "",
     country: store?.locationData?.country || store?.country || "Nigeria",
     description: store?.description || "",
-    messageTemplate: defaultMessageTemplate,
+    storeAddress: store?.storeAddress || store?.address || "",
+    bannerText: store?.bannerText || "",
     logo: null,
     banner: null,
   };
@@ -129,8 +124,12 @@ function productFormData(
   data.set("name", form.name.trim());
   data.set("description", form.description.trim());
   data.set("price", String(Number(form.price)));
-  data.set("categoryId", form.categoryId);
+  if (form.categoryId) data.set("categoryId", form.categoryId);
   data.set("inStock", "true");
+  data.set("pushToMarketplace", String(form.pushToMarketplace));
+  if (form.pushToMarketplace && form.marketplaceCategoryId) {
+    data.set("marketplaceCategoryId", form.marketplaceCategoryId);
+  }
   if (form.locationId) data.set("locationId", form.locationId);
 
   if (options.includeStoreId && options.storeId) {
@@ -164,9 +163,14 @@ function sameText(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-export default function DashboardClient() {
-  const [activeView, setActiveView] = useState<DashboardView>("overview");
-  const [mounted, setMounted] = useState(false);
+export default function DashboardClient({
+  initialView = "overview",
+  productMode = "list",
+}: {
+  initialView?: DashboardView;
+  productMode?: "list" | "form";
+}) {
+  const activeView = initialView;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedStoreSlug, setSelectedStoreSlug] = useState("");
   const [productForm, setProductForm] = useState<ProductFormState>(initialProductForm);
@@ -181,8 +185,13 @@ export default function DashboardClient() {
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isDeletingProductId, setIsDeletingProductId] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   const { user, isLoading: userLoading, mutate: refreshUser } = useMe();
+  const stores = user?.stores ?? [];
+  const selectedStore = stores.find((store) => store.slug === selectedStoreSlug) ?? stores[0];
   const { analytics } = useSellerAnalytics();
   const { categories } = useCategories();
   const { locations: allLocations } = useLocations({ country: "Nigeria" });
@@ -206,11 +215,9 @@ export default function DashboardClient() {
         }
       : undefined
   );
-  const { categories: productCategories } = useProductCategories();
+  const { categories: productCategories, mutate: refreshProductCategories } = useProductCategories(selectedStore?.id);
+  const { categories: marketplaceCategories } = useProductCategories();
   const { templates } = useTemplates("STORE");
-
-  const stores = user?.stores ?? [];
-  const selectedStore = stores.find((store) => store.slug === selectedStoreSlug) ?? stores[0];
   const { products, isLoading: productsLoading, mutate: refreshProducts } = useSellerProducts(
     selectedStore ? { storeId: selectedStore.id, limit: 100 } : undefined
   );
@@ -220,8 +227,12 @@ export default function DashboardClient() {
     [categories]
   );
   const activeProductCategories = useMemo(
-    () => productCategories.filter((category) => category.isActive !== false),
+    () => productCategories.filter((category) => category.isActive !== false && category.storeId),
     [productCategories]
+  );
+  const activeMarketplaceCategories = useMemo(
+    () => marketplaceCategories.filter((category) => category.isActive !== false && !category.storeId),
+    [marketplaceCategories]
   );
   const activeTemplates = useMemo(
     () => templates.filter((template) => template.isActive !== false),
@@ -249,7 +260,7 @@ export default function DashboardClient() {
       ),
     [settingsForm.city, settingsForm.state, stateLocations]
   );
-  const needsValidCity = Boolean(settingsForm.state && !exactCity);
+  const needsValidCity = Boolean(settingsForm.state && settingsForm.city && !exactCity);
   const hasValidPrimaryColor = isHexColor(settingsForm.primaryColor || "#2563eb");
 
   const visibleProducts = useMemo(() => {
@@ -267,39 +278,20 @@ export default function DashboardClient() {
 
   const fallbackTotalProducts = stores.reduce((total, store) => total + (store.productCount ?? 0), 0);
   const totalProducts = analytics?.totalProducts ?? fallbackTotalProducts;
-  const whatsappClicks = analytics?.whatsappClicks ?? 0;
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     if (!getAccessToken()) {
       window.location.replace("/login");
     }
-  }, [mounted]);
-
-  useEffect(() => {
-    if (!selectedStoreSlug && stores[0]?.slug) {
-      setSelectedStoreSlug(stores[0].slug);
-    }
-  }, [selectedStoreSlug, stores]);
+  }, []);
 
   useEffect(() => {
     setSettingsForm(emptySettings(selectedStore));
     setEditingProduct(null);
-    setProductForm(productDefaults(selectedStore, activeProductCategories[0]?.id || ""));
+    setProductForm(productDefaults(selectedStore, ""));
     setNotice("");
     setError("");
   }, [selectedStore?.id]);
-
-  useEffect(() => {
-    setProductForm((current) => ({
-      ...current,
-      categoryId: current.categoryId || activeProductCategories[0]?.id || "",
-    }));
-  }, [activeProductCategories]);
 
   useEffect(() => {
     const slug = settingsForm.slug.trim();
@@ -359,7 +351,6 @@ export default function DashboardClient() {
 
   function selectStore(slug: string) {
     setSelectedStoreSlug(slug);
-    setActiveView("overview");
   }
 
   function updateStoreName(name: string) {
@@ -432,19 +423,20 @@ export default function DashboardClient() {
       description: product.description || "",
       price: String(product.price || ""),
       categoryId: product.categoryId || "",
+      marketplaceCategoryId: product.marketplaceCategoryId || "",
       locationId: product.locationId || selectedStore?.locationId || selectedStore?.locationData?.id || "",
       state: product.location?.state || selectedStore?.locationData?.state || selectedStore?.state || "",
       city: product.location?.city || selectedStore?.locationData?.city || selectedStore?.city || "",
       country: product.location?.country || selectedStore?.locationData?.country || selectedStore?.country || "Nigeria",
       images: [],
+      pushToMarketplace: product.pushToMarketplace === true,
     });
-    setActiveView("products");
   }
 
   function resetProductForm() {
     setEditingProduct(null);
     setProductForm({
-      ...productDefaults(selectedStore, activeProductCategories[0]?.id || ""),
+      ...productDefaults(selectedStore, ""),
     });
   }
 
@@ -491,9 +483,39 @@ export default function DashboardClient() {
     });
   }
 
+  async function addProductCategory() {
+    if (!selectedStore?.id || !newCategoryName.trim()) return;
+
+    setError("");
+    setNotice("");
+    setIsSavingCategory(true);
+
+    try {
+      const category = await createProductCategory({
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim() || undefined,
+        storeId: selectedStore.id,
+      });
+      setProductForm({ ...productForm, categoryId: category.id });
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      await refreshProductCategories();
+      setNotice("Category added.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add category.");
+    } finally {
+      setIsSavingCategory(false);
+    }
+  }
+
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedStore?.id || !productForm.name.trim() || !productForm.price || !productForm.categoryId) return;
+    if (
+      !selectedStore?.id ||
+      !productForm.name.trim() ||
+      !productForm.price ||
+      (productForm.pushToMarketplace && !productForm.marketplaceCategoryId)
+    ) return;
 
     setError("");
     setNotice("");
@@ -548,26 +570,53 @@ export default function DashboardClient() {
     setIsSavingSettings(true);
 
     try {
-      const body = new FormData();
-      body.set("name", settingsForm.name.trim());
-      body.set("slug", settingsForm.slug.trim());
-      body.set("phone", settingsForm.phone.trim());
-      body.set("primaryColor", settingsForm.primaryColor || "#2563eb");
-      body.set("description", settingsForm.description.trim());
+      const settingsPayload = {
+        name: settingsForm.name.trim(),
+        slug: settingsForm.slug.trim(),
+        phone: settingsForm.phone.trim(),
+        primaryColor: settingsForm.primaryColor || "#2563eb",
+        description: settingsForm.description.trim(),
+        address: settingsForm.storeAddress.trim(),
+        storeAddress: settingsForm.storeAddress.trim(),
+        bannerText: settingsForm.bannerText.trim(),
+      };
       const locationId = resolveStoreLocationId();
-      if (locationId) body.set("locationId", locationId);
-      if (settingsForm.logo) body.set("logo", settingsForm.logo);
-      if (settingsForm.banner) body.set("banner", settingsForm.banner);
+      const hasUpload = Boolean(settingsForm.logo || settingsForm.banner);
+      let body: FormData | typeof settingsPayload | (typeof settingsPayload & { locationId: string });
+
+      if (hasUpload) {
+        const formBody = new FormData();
+        Object.entries(settingsPayload).forEach(([key, value]) => {
+          formBody.set(key, value);
+        });
+        if (locationId) formBody.set("locationId", locationId);
+        if (settingsForm.logo) formBody.set("logo", settingsForm.logo);
+        if (settingsForm.banner) formBody.set("banner", settingsForm.banner);
+        body = formBody;
+      } else {
+        body = { ...settingsPayload, ...(locationId ? { locationId } : {}) };
+      }
 
       if (selectedStore?.slug) {
         await updateStore(selectedStore.slug, body);
         setNotice("Settings saved.");
       } else {
-        body.set("email", user?.email || "");
-        body.set("categoryId", activeStoreCategories[0]?.id || "");
-        body.set("templateId", activeTemplates[0]?.id || "");
+        if (body instanceof FormData) {
+          body.set("email", user?.email || "");
+          body.set("categoryId", activeStoreCategories[0]?.id || "");
+          body.set("templateId", activeTemplates[0]?.id || "");
+        }
 
-        const store = await createStore(body);
+        const store = await createStore(
+          hasUpload
+            ? body
+            : {
+                ...body,
+                email: user?.email || "",
+                categoryId: activeStoreCategories[0]?.id || "",
+                templateId: activeTemplates[0]?.id || "",
+              }
+        );
         setSelectedStoreSlug(store.slug);
         setNotice("Store created.");
       }
@@ -590,7 +639,7 @@ export default function DashboardClient() {
     window.setTimeout(() => setCopiedProductId(""), 1800);
   }
 
-  if (!mounted || userLoading) {
+  if (userLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-50 text-zinc-500">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -600,21 +649,21 @@ export default function DashboardClient() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-950 lg:flex">
+    <main className="min-h-screen bg-zinc-100 text-zinc-950">
       <SellerSidebar
         user={user}
         activeView={activeView}
         collapsed={sidebarCollapsed}
-        onChangeView={setActiveView}
+        onChangeView={() => undefined}
         onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
         onLogout={logout}
       />
 
-      <div className="min-w-0 flex-1">
-        <header className="border-b border-zinc-200 bg-white">
+      <div className={`min-w-0 transition-[margin] ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"}`}>
+        <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 xl:px-8 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-primary">WhatsApp commerce</p>
+              <p className="text-sm font-semibold text-primary">Seller dashboard</p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight md:text-3xl">
                 {activeView === "overview" && "Overview"}
                 {activeView === "products" && "Products"}
@@ -645,14 +694,6 @@ export default function DashboardClient() {
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
               )}
-              <button
-                type="button"
-                onClick={() => setActiveView("products")}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
-              >
-                <Plus className="h-4 w-4" />
-                Add product
-              </button>
             </div>
           </div>
         </header>
@@ -674,13 +715,14 @@ export default function DashboardClient() {
             <>
               <section className="grid gap-4 md:grid-cols-2">
                 <MetricCard label="Total Products" value={totalProducts} helper="Live catalog items" icon={Package} />
-                <MetricCard label="WhatsApp Clicks" value={whatsappClicks} helper="Order button taps" icon={MessageCircle} />
+                <MetricCard label="Store Views This Week" value={analytics?.storeViewsThisWeek ?? 0} helper="Recent storefront visits" icon={Eye} />
               </section>
             </>
           )}
 
           {activeView === "products" && (
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className={productMode === "form" ? "max-w-2xl" : editingProduct ? "grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]" : "grid gap-5"}>
+              {productMode !== "form" && (
               <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-3 border-b border-zinc-200 p-4 md:flex-row md:items-center md:justify-between">
                   <div className="relative w-full md:max-w-sm">
@@ -692,7 +734,16 @@ export default function DashboardClient() {
                       className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
                     />
                   </div>
-                  <p className="text-sm font-semibold text-zinc-500">{visibleProducts.length} products</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-zinc-500">{visibleProducts.length} products</p>
+                    <Link
+                      href="/dashboard/products/new"
+                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add product
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -754,8 +805,7 @@ export default function DashboardClient() {
                                     {(product.viewCount ?? 0).toLocaleString()} views
                                   </span>
                                   <span className="inline-flex items-center gap-1">
-                                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                    {(product.whatsappClickCount ?? 0).toLocaleString()} clicks
+                                    {product.pushToMarketplace === false ? "Hidden from marketplace" : "Marketplace visible"}
                                   </span>
                                 </div>
                               </td>
@@ -818,7 +868,9 @@ export default function DashboardClient() {
                   </div>
                 )}
               </section>
+              )}
 
+              {(productMode === "form" || editingProduct) && (
               <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -864,15 +916,14 @@ export default function DashboardClient() {
                   </label>
 
                   <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600">Category</span>
+                    <span className="text-xs font-semibold text-zinc-600">Store category</span>
                     <select
-                      required
                       value={productForm.categoryId}
                       onChange={(event) => setProductForm({ ...productForm, categoryId: event.target.value })}
                       disabled={!selectedStore}
                       className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
                     >
-                      <option value="">No category</option>
+                      <option value="">No store category</option>
                       {activeProductCategories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
@@ -880,6 +931,38 @@ export default function DashboardClient() {
                       ))}
                     </select>
                   </label>
+
+                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                    <span className="text-xs font-semibold text-zinc-700">Add store category</span>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={newCategoryName}
+                        onChange={(event) => setNewCategoryName(event.target.value)}
+                        disabled={!selectedStore || isSavingCategory}
+                        placeholder="e.g. New arrivals"
+                        className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={addProductCategory}
+                        disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
+                        className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 px-3 text-xs font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={newCategoryDescription}
+                      onChange={(event) => setNewCategoryDescription(event.target.value)}
+                      disabled={!selectedStore || isSavingCategory}
+                      placeholder="Short category description"
+                      className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    />
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      Store categories appear on your store page. Marketplace visibility is still controlled per product.
+                    </p>
+                  </div>
 
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                     <div className="flex items-start justify-between gap-3">
@@ -998,9 +1081,63 @@ export default function DashboardClient() {
                     )}
                   </label>
 
+                  <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={productForm.pushToMarketplace}
+                        onChange={(event) =>
+                          setProductForm({
+                            ...productForm,
+                            pushToMarketplace: event.target.checked,
+                            marketplaceCategoryId: event.target.checked ? productForm.marketplaceCategoryId : "",
+                          })
+                        }
+                        disabled={!selectedStore}
+                        className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-primary focus:ring-primary"
+                      />
+                      <span>
+                        <span className="block text-xs font-semibold text-zinc-700">Publish to marketplace</span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                          Keep this off for store-only products. Turn it on only when this item should appear in marketplace discovery.
+                        </span>
+                      </span>
+                    </label>
+
+                    {productForm.pushToMarketplace && (
+                      <label className="mt-3 block">
+                        <span className="text-xs font-semibold text-zinc-600">Marketplace category</span>
+                        <select
+                          required={productForm.pushToMarketplace}
+                          value={productForm.marketplaceCategoryId}
+                          onChange={(event) =>
+                            setProductForm({ ...productForm, marketplaceCategoryId: event.target.value })
+                          }
+                          disabled={!selectedStore}
+                          className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                        >
+                          <option value="">Select marketplace category</option>
+                          {activeMarketplaceCategories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="mt-1 block text-xs text-zinc-500">
+                          This category is used only for marketplace SEO, filtering, and discovery.
+                        </span>
+                      </label>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={!selectedStore || isSavingProduct || !productForm.price || !productForm.categoryId}
+                    disabled={
+                      !selectedStore ||
+                      isSavingProduct ||
+                      !productForm.price ||
+                      (productForm.pushToMarketplace && !productForm.marketplaceCategoryId)
+                    }
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {isSavingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -1008,6 +1145,7 @@ export default function DashboardClient() {
                   </button>
                 </form>
               </section>
+              )}
             </div>
           )}
 
@@ -1068,13 +1206,28 @@ export default function DashboardClient() {
                 </label>
 
                 <label className="block md:col-span-2">
-                  <span className="text-xs font-semibold text-zinc-600">WhatsApp phone number</span>
+                  <span className="text-xs font-semibold text-zinc-600">Phone number</span>
                   <input
                     required
                     value={settingsForm.phone}
                     onChange={(event) => setSettingsForm({ ...settingsForm, phone: event.target.value })}
                     className="mt-1 h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
                   />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="text-xs font-semibold text-zinc-600">Banner text</span>
+                  <textarea
+                    rows={3}
+                    maxLength={240}
+                    value={settingsForm.bannerText}
+                    onChange={(event) => setSettingsForm({ ...settingsForm, bannerText: event.target.value })}
+                    placeholder="Welcome to our store - explore amazing products today"
+                    className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Appears in the hero section of your store.
+                  </span>
                 </label>
 
                 <label className="block md:col-span-2">
@@ -1172,6 +1325,20 @@ export default function DashboardClient() {
                 </label>
 
                 <label className="block md:col-span-2">
+                  <span className="text-xs font-semibold text-zinc-600">Store address</span>
+                  <textarea
+                    rows={3}
+                    value={settingsForm.storeAddress}
+                    onChange={(event) => setSettingsForm({ ...settingsForm, storeAddress: event.target.value })}
+                    placeholder="Full business address shown only in the store footer"
+                    className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                  />
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Displayed only in the footer of your store page.
+                  </span>
+                </label>
+
+                <label className="block md:col-span-2">
                   <span className="text-xs font-semibold text-zinc-600">Business logo</span>
                   <input
                     type="file"
@@ -1199,15 +1366,6 @@ export default function DashboardClient() {
                       Selected: {settingsForm.banner.name}
                     </span>
                   )}
-                </label>
-
-                <label className="block md:col-span-2">
-                  <span className="text-xs font-semibold text-zinc-600">Default WhatsApp message template</span>
-                  <input
-                    value={settingsForm.messageTemplate}
-                    onChange={(event) => setSettingsForm({ ...settingsForm, messageTemplate: event.target.value })}
-                    className="mt-1 h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                  />
                 </label>
 
                 <div className="md:col-span-2">

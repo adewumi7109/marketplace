@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "MarktPlace - Discover Local Stores",
   description:
     "Browse and order from the best local stores near you. Fashion, food, electronics, and more.",
-  keywords: ["marketplace", "stores", "local", "Nigeria", "shopping", "WhatsApp"],
+  keywords: ["marketplace", "stores", "local", "Nigeria", "shopping"],
   openGraph: {
     title: "MarktPlace",
     description: "Discover and shop from local stores",

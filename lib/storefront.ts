@@ -11,9 +11,12 @@ function compactStrings(values: Array<string | null | undefined>) {
   return values.filter((value): value is string => Boolean(value));
 }
 
-export function getStorePrimaryColor(store?: Pick<Store, "primaryColor" | "templateData"> | null) {
+export function getStorePrimaryColor(store?: Pick<Store, "primaryColor" | "templateData" | "templateConfig"> | null) {
   const storeColor = store?.primaryColor;
   if (isHexColor(storeColor)) return storeColor as string;
+
+  const storeConfigColor = store?.templateConfig?.primaryColor;
+  if (typeof storeConfigColor === "string" && isHexColor(storeConfigColor)) return storeConfigColor;
 
   const configColor = store?.templateData?.config?.primaryColor;
   if (typeof configColor === "string" && isHexColor(configColor)) return configColor;
@@ -58,11 +61,11 @@ export function storeLocationLabel(store?: Store | null) {
 }
 
 export function storeMetadata(store: Store): Metadata {
-  const title = `${store.name} | WhatsApp Store`;
+  const title = `${store.name} | Online Store`;
   const location = storeLocationLabel(store);
   const description =
     store.description ||
-    `Shop products from ${store.name}${location ? ` in ${location}` : ""} and order directly on WhatsApp.`;
+    `Shop products from ${store.name}${location ? ` in ${location}` : ""}.`;
   const logo = absoluteUrl(store.logoUrl || store.logo);
   const banner = absoluteUrl(store.bannerUrl || store.banner || store.logoUrl || store.logo);
   const canonical = `${getSiteUrl()}/store/${store.slug}`;
@@ -70,7 +73,7 @@ export function storeMetadata(store: Store): Metadata {
   return {
     title,
     description,
-    keywords: compactStrings([store.name, store.category, location, "WhatsApp store", "local store"]),
+    keywords: compactStrings([store.name, store.category, location, "online store", "local store"]),
     alternates: { canonical },
     icons: logo
       ? {
@@ -104,12 +107,12 @@ export function storeProductMetadata(product: Product, store: Store): Metadata {
   const canonical = `${getSiteUrl()}/store/${store.slug}/products/${product.slug || product.id}`;
   const description =
     product.description ||
-    `View ${product.name} from ${store.name}${location ? ` in ${location}` : ""} and order directly on WhatsApp.`;
+    `View ${product.name} from ${store.name}${location ? ` in ${location}` : ""}.`;
 
   return {
     title,
     description,
-    keywords: compactStrings([product.name, product.category, store.name, location, "WhatsApp order"]),
+    keywords: compactStrings([product.name, product.category, store.name, location, "online shopping"]),
     alternates: { canonical },
     icons: logo
       ? {

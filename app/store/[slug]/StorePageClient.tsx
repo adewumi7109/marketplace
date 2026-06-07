@@ -10,18 +10,39 @@ import { getStorePrimaryColor } from "@/lib/storefront";
 interface Props {
   store: Store;
   products: Product[];
+  initialCategory?: string;
 }
 
-export default function StorePageClient({ store, products }: Props) {
+function categorySlug(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export default function StorePageClient({ store, products, initialCategory = "" }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const initialCategoryName = useMemo(() => {
+    if (!initialCategory) return "";
+    const found = products.find((product) => {
+      const name = product.productCategory?.name || product.category || "";
+      return categorySlug(name) === initialCategory;
+    });
+    return found?.productCategory?.name || found?.category || "";
+  }, [initialCategory, products]);
+  const [category, setCategory] = useState(initialCategoryName);
   const primaryColor = getStorePrimaryColor(store);
 
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return products;
 
     return products.filter((product) => {
+      const productCategory = product.productCategory?.name || product.category || "";
+      if (category && productCategory !== category) return false;
+      if (!term) return true;
+
       const searchable = [
         product.name,
         product.description,
@@ -34,7 +55,7 @@ export default function StorePageClient({ store, products }: Props) {
 
       return searchable.includes(term);
     });
-  }, [products, search]);
+  }, [products, search, category]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -67,7 +88,10 @@ export default function StorePageClient({ store, products }: Props) {
         store={store}
         products={filteredProducts}
         search={search}
+        selectedCategory={category}
+        allProducts={products}
         onSearchChange={setSearch}
+        onCategoryChange={setCategory}
         onProductClick={(product) => {
           router.push(`/store/${store.slug}/products/${product.slug || product.id}`);
         }}

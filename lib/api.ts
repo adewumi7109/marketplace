@@ -149,6 +149,14 @@ export function clearAccessToken() {
   setAccessToken(null);
 }
 
+function redirectToLoginOnAuthFailure() {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/login")) return;
+
+  clearAccessToken();
+  window.location.replace("/login");
+}
+
 function extractAccessToken(response: AuthResponse) {
   return (
     response.access_token ||
@@ -207,6 +215,9 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const message = payloadMessage(payload) ?? res.statusText ?? `API error ${res.status}`;
+    if (requireAuth && res.status === 401) {
+      redirectToLoginOnAuthFailure();
+    }
 
     throw new ApiRequestError(message, res.status, payload);
   }
@@ -262,10 +273,20 @@ export function normalizeStore(input: unknown): Store {
     banner: valueAsString(source.banner) || valueAsString(source.bannerUrl) || null,
     logoUrl: valueAsString(source.logoUrl) || valueAsString(source.logo) || null,
     bannerUrl: valueAsString(source.bannerUrl) || valueAsString(source.banner) || null,
+    bannerText: valueAsString(source.bannerText) || null,
     primaryColor: valueAsString(source.primaryColor) || null,
     phone: valueAsString(source.phone),
     email: valueAsString(source.email) || null,
-    address: valueAsString(source.address) || null,
+    address:
+      valueAsString(source.address) ||
+      valueAsString(source.storeAddress) ||
+      valueAsString(source.store_address) ||
+      null,
+    storeAddress:
+      valueAsString(source.storeAddress) ||
+      valueAsString(source.store_address) ||
+      valueAsString(source.address) ||
+      null,
     city: valueAsString(source.city) || (location ? valueAsString(location.city) : null),
     state: valueAsString(source.state) || (location ? valueAsString(location.state) : null),
     country: valueAsString(source.country) || (location ? valueAsString(location.country) : null),
@@ -284,6 +305,7 @@ export function normalizeStore(input: unknown): Store {
       valueAsString(source.templateId) ||
       (isRecord(template) ? valueAsString(template.id) : null),
     templateData: isRecord(template) ? (template as unknown as Template) : null,
+    templateConfig: isRecord(source.templateConfig) ? source.templateConfig : null,
     isActive: valueAsBoolean(source.isActive, true),
     isVerified: valueAsBoolean(source.isVerified, false),
     rating: valueAsNumber(source.rating, 0),
@@ -304,6 +326,7 @@ export function normalizeProduct(input: unknown): Product {
     ? source.images.filter((image): image is string => typeof image === "string")
     : [];
   const category = isRecord(source.category) ? source.category : source.productCategory;
+  const marketplaceCategory = isRecord(source.marketplaceCategory) ? source.marketplaceCategory : null;
   const location = isRecord(source.location) ? source.location : null;
 
   return {
@@ -321,14 +344,20 @@ export function normalizeProduct(input: unknown): Product {
     store: isRecord(source.store) ? normalizeStore(source.store) : undefined,
     inStock: valueAsBoolean(source.inStock, true),
     isActive: valueAsBoolean(source.isActive, true),
+    pushToMarketplace: valueAsBoolean(source.pushToMarketplace, true),
     isNegotiable: valueAsBoolean(source.isNegotiable, false),
     category:
       valueAsString(source.category) ||
-      (isRecord(category) ? valueAsString(category.name) : ""),
+      (isRecord(category) ? valueAsString(category.name) : "") ||
+      (marketplaceCategory ? valueAsString(marketplaceCategory.name) : ""),
     categoryId:
       valueAsString(source.categoryId) ||
       (isRecord(category) ? valueAsString(category.id) : null),
     productCategory: isRecord(category) ? (category as unknown as ProductCategory) : null,
+    marketplaceCategory: marketplaceCategory ? (marketplaceCategory as unknown as ProductCategory) : null,
+    marketplaceCategoryId:
+      valueAsString(source.marketplaceCategoryId) ||
+      (marketplaceCategory ? valueAsString(marketplaceCategory.id) : null),
     locationId:
       valueAsString(source.locationId) ||
       (location ? valueAsString(location.id) : null),
@@ -651,6 +680,24 @@ export async function updateStoreTemplate(
   return normalizeStore(unwrapOne(payload, ["data", "store"]));
 }
 
+export async function updateStoreTemplateConfig(
+  slug: string,
+  input: { templateId?: string; config?: Record<string, unknown> },
+  token?: string | null
+) {
+  const payload = await apiFetch<unknown>(
+    `/api/stores/${encodeURIComponent(slug)}/template`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+      token,
+      requireAuth: true,
+    }
+  );
+
+  return normalizeStore(unwrapOne(payload, ["data", "store"]));
+}
+
 export async function getProductsByStore(
   slug: string,
   params?: ProductQueryParams
@@ -802,8 +849,8 @@ export async function deleteStoreCategory(id: string, token?: string | null) {
   });
 }
 
-export async function getProductCategories() {
-  const payload = await apiFetch<unknown>("/api/categories/products");
+export async function getProductCategories(storeId?: string) {
+  const payload = await apiFetch<unknown>(appendQuery("/api/categories/products", { storeId }));
   return unwrapArray(payload, ["data", "categories", "productCategories"], (item) => item as ProductCategory);
 }
 

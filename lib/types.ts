@@ -30,6 +30,8 @@ export interface ProductCategory {
   name: string;
   description?: string | null;
   icon?: string | null;
+  slug?: string | null;
+  storeId?: string | null;
   isActive?: boolean;
   storeCount?: number;
   productCount?: number;
@@ -69,10 +71,12 @@ export interface Store {
   banner?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
+  bannerText?: string | null;
   primaryColor?: string | null;
   phone: string;
   email?: string | null;
   address?: string | null;
+  storeAddress?: string | null;
   city?: string | null;
   state?: string | null;
   country?: string | null;
@@ -85,6 +89,7 @@ export interface Store {
   template: TemplateCode;
   templateId?: string | null;
   templateData?: Template | null;
+  templateConfig?: Record<string, unknown> | null;
   isActive?: boolean;
   isVerified?: boolean;
   rating?: number;
@@ -110,10 +115,13 @@ export interface Product {
   store?: Store;
   inStock?: boolean;
   isActive?: boolean;
+  pushToMarketplace?: boolean;
   isNegotiable?: boolean;
   category?: string;
   categoryId?: string | null;
   productCategory?: ProductCategory | null;
+  marketplaceCategory?: ProductCategory | null;
+  marketplaceCategoryId?: string | null;
   locationId?: string | null;
   location?: ProductLocation | null;
   viewCount?: number;
@@ -169,15 +177,17 @@ export interface CreateStoreInput {
   description?: string;
   logo?: string;
   banner?: string;
+  bannerText?: string;
   primaryColor?: string;
   phone: string;
   email?: string;
   address?: string;
+  storeAddress?: string;
   city?: string;
   state?: string;
   country?: string;
   locationId?: string;
-  categoryId: string;
+  categoryId?: string;
   templateId?: string;
 }
 
@@ -192,7 +202,9 @@ export interface CreateProductInput {
   images?: string[];
   inStock?: boolean;
   isNegotiable?: boolean;
+  pushToMarketplace?: boolean;
   categoryId?: string;
+  marketplaceCategoryId?: string;
   locationId?: string;
   storeId?: string;
 }
@@ -203,6 +215,7 @@ export interface CreateCategoryInput {
   name: string;
   description?: string;
   icon?: string;
+  storeId?: string;
 }
 
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;

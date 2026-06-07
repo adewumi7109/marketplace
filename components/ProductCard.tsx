@@ -1,7 +1,7 @@
 import Image from "next/image";
-import { MessageCircle, Percent, Box, Check, X, MapPin } from "lucide-react";
+import { Percent, Box, Check, X, MapPin, ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { buildWhatsAppLink, formatPrice, trackProductWhatsAppClick } from "@/lib/api";
+import { formatPrice } from "@/lib/api";
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +13,7 @@ interface ProductCardProps {
   showComparePrice?: boolean;
   showInStock?: boolean;
   showWhatsapp?: boolean;
+  showLocation?: boolean;
   primaryColor?: string;
   onProductClick?: (product: Product) => void;
 }
@@ -27,17 +28,10 @@ export default function ProductCard({
   showComparePrice = true,
   showInStock = true,
   showWhatsapp = true,
+  showLocation = true,
   primaryColor,
   onProductClick,
 }: ProductCardProps) {
-  const waLink = buildWhatsAppLink(
-    storePhone,
-    product.name,
-    product.price,
-    product.currency,
-    product.whatsappOrderLink
-  );
-
   const price = formatPrice(product.price, product.currency);
 
   const imageUrl = product.imageUrl || product.images?.[0] || null;
@@ -66,23 +60,21 @@ export default function ProductCard({
 
   const openProduct = () => onProductClick?.(product);
 
-  const WhatsAppButton = ({ className = "" }: { className?: string }) => (
-    <a
-      href={waLink}
-      target="_blank"
-      rel="noopener noreferrer"
+  const OrderButton = ({ className = "" }: { className?: string }) => (
+    <button
+      type="button"
       onClick={(e) => {
         e.stopPropagation();
-        trackProductWhatsAppClick(product.id).catch(() => undefined);
+        openProduct();
       }}
       className={`inline-flex items-center justify-center gap-1 rounded-md bg-primary font-semibold text-white transition hover:bg-primary/90 ${
         isCompact ? "px-2 py-1 text-[10px]" : "px-2 py-1.5 text-[11px] sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs"
       } ${className}`}
       style={primaryColor ? { backgroundColor: primaryColor } : undefined}
     >
-      <MessageCircle className={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+      <ShoppingBag className={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"} />
       Order
-    </a>
+    </button>
   );
 
   const Badges = () => {
@@ -203,7 +195,7 @@ export default function ProductCard({
             </p>
           )}
 
-          {locationLabel && (
+          {showLocation && locationLabel && (
             <p
               className={`mt-2 flex min-w-0 items-center gap-1 font-medium text-zinc-500 ${
                 isCompact ? "text-[10px]" : "text-[11px] sm:text-xs"
@@ -240,7 +232,7 @@ export default function ProductCard({
           </div>
 
           {showWhatsapp &&
-            product.inStock !== false && <WhatsAppButton />}
+            product.inStock !== false && <OrderButton />}
         </div>
       </div>
     </article>

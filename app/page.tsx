@@ -182,7 +182,7 @@ useEffect(() => {
       </h1>
 
       <p className="mb-8 max-w-lg text-lg text-white/80">
-        Browse thousands of products, compare prices, and order directly via WhatsApp from trusted stores.
+        Browse thousands of products, compare prices, and discover trusted stores.
       </p>
 
       <SearchBar

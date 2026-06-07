@@ -27,10 +27,11 @@ const navItems: Array<{
   id: DashboardView;
   label: string;
   icon: typeof BarChart3;
+  href: string;
 }> = [
-  { id: "overview", label: "Overview", icon: BarChart3 },
-  { id: "products", label: "Products", icon: Package },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "overview", label: "Overview", icon: BarChart3, href: "/dashboard" },
+  { id: "products", label: "Products", icon: Package, href: "/dashboard/products" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
 
 export default function SellerSidebar({
@@ -43,7 +44,7 @@ export default function SellerSidebar({
 }: SellerSidebarProps) {
   return (
     <aside
-      className={`flex border-r border-zinc-200 bg-white lg:sticky lg:top-0 lg:min-h-screen ${
+      className={`z-30 flex border-r border-zinc-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 ${
         collapsed ? "lg:w-20" : "lg:w-72"
       }`}
     >
@@ -58,7 +59,7 @@ export default function SellerSidebar({
                 <span className="block truncate font-display text-lg font-bold tracking-tight">
                   Seller Desk
                 </span>
-                <span className="block truncate text-xs text-zinc-500">WhatsApp commerce</span>
+                <span className="block truncate text-xs text-zinc-500">Storefront commerce</span>
               </span>
             )}
           </Link>
@@ -88,9 +89,9 @@ export default function SellerSidebar({
             const active = activeView === item.id;
 
             return (
-              <button
+              <Link
                 key={item.id}
-                type="button"
+                href={item.href}
                 onClick={() => onChangeView(item.id)}
                 className={`flex h-11 items-center justify-center gap-3 rounded-lg px-3 text-sm font-semibold transition lg:w-full lg:justify-start ${
                   active
@@ -102,7 +103,7 @@ export default function SellerSidebar({
                 <Icon className="h-4 w-4 shrink-0" />
                 {!collapsed && <span className="hidden lg:inline">{item.label}</span>}
                 <span className="lg:hidden">{item.label}</span>
-              </button>
+              </Link>
             );
           })}
         </nav>

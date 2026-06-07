@@ -1,0 +1,16 @@
+
+> marketplace-frontend@0.1.0 dev
+> next dev -H 0.0.0.0 -p 3000
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env
+✓ Ready in 730ms
+Creating turbopack project {
+  dir: 'C:\\Users\\user\\Desktop\\Projects\\marketplace-frontend',
+  testMode: true
+}
+
+ GET /dashboard/settings 200 in 764ms (next.js: 359ms, application-code: 405ms)
+ GET /store/adexcico/products/hp-840-g1 200 in 8.5s (next.js: 1733ms, application-code: 6.7s)

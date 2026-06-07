@@ -5,21 +5,21 @@ import type { Metadata } from "next";
 import {
   ArrowLeft,
   BadgeCheck,
-  Box,
   CheckCircle2,
   MapPin,
-  MessageCircle,
+  ShoppingBag,
   Tag,
   Eye,
   XCircle,
 } from "lucide-react";
-import { buildWhatsAppLink, formatPrice, getStoreProductBySlug } from "@/lib/api";
-import { ProductViewTracker, WhatsAppOrderButton } from "@/components/ProductEngagement";
+import { formatPrice, getStoreProductBySlug } from "@/lib/api";
+import { ProductViewTracker } from "@/components/ProductEngagement";
+import ProductShareLinks from "@/components/ProductShareLinks";
+import ProductImageGallery from "@/components/ProductImageGallery";
 import {
   absoluteUrl,
   getSiteUrl,
   getStorePrimaryColor,
-  storeLocationLabel,
   storeProductMetadata,
 } from "@/lib/storefront";
 import type { Store } from "@/lib/types";
@@ -76,17 +76,8 @@ export default async function StoreProductPage({ params }: Props) {
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
   const primaryColor = getStorePrimaryColor(store);
-  const storePlace = storeLocationLabel(store) || "Nigeria";
-  const cleanPhone = store.phone?.replace(/\D/g, "") || "";
   const canonical = `${getSiteUrl()}/store/${store.slug}/products/${product.slug || product.id}`;
   const imageForSeo = absoluteUrl(mainImage || store.logoUrl || store.logo);
-  const whatsappLink = buildWhatsAppLink(
-    store.phone || "",
-    product.name,
-    product.price,
-    product.currency,
-    product.whatsappOrderLink
-  );
 
   return (
     <main
@@ -141,28 +132,22 @@ export default async function StoreProductPage({ params }: Props) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-black leading-tight">{store.name}</p>
-              <p className="truncate text-xs font-medium text-zinc-500">{storePlace}</p>
             </div>
           </Link>
 
           <div className="ml-auto hidden items-center gap-7 text-sm font-semibold text-zinc-700 md:flex">
             <Link href={`/store/${store.slug}`} className="transition hover:text-zinc-950">Store</Link>
             <Link href={`/store/${store.slug}#products`} className="transition hover:text-zinc-950">Products</Link>
-            {store.phone && <a href={`tel:${store.phone}`} className="transition hover:text-zinc-950">Call</a>}
+            <Link href={`/store/${store.slug}#about`} className="transition hover:text-zinc-950">About</Link>
           </div>
-
-          {cleanPhone && (
-            <a
-              href={`https://wa.me/${cleanPhone}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden h-10 items-center gap-2 rounded-md px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 sm:inline-flex"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </a>
-          )}
+          <Link
+            href={`/store/${store.slug}#products`}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 md:ml-0"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Shop
+          </Link>
         </div>
       </header>
 
@@ -179,43 +164,7 @@ export default async function StoreProductPage({ params }: Props) {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 pb-12 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-        <div className="space-y-4">
-          <div className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-            {mainImage ? (
-              <Image
-                src={mainImage}
-                alt={product.name}
-                fill
-                sizes="(min-width: 1024px) 55vw, 100vw"
-                className="object-contain p-4"
-                priority
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-zinc-300">
-                <Box className="h-16 w-16" />
-              </div>
-            )}
-          </div>
-
-          {images.length > 1 && (
-            <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-              {images.slice(0, 6).map((image, index) => (
-                <div
-                  key={`${image}-${index}`}
-                  className="relative aspect-square overflow-hidden rounded-md border border-zinc-200 bg-white"
-                >
-                  <Image
-                    src={image}
-                    alt={`${product.name} image ${index + 1}`}
-                    fill
-                    sizes="120px"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductImageGallery images={images} name={product.name} />
 
         <div className="lg:pt-4">
           <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-600">
@@ -290,14 +239,18 @@ export default async function StoreProductPage({ params }: Props) {
             </dl>
           </div>
 
-          {product.inStock !== false && store.phone && (
-            <WhatsAppOrderButton
-              productId={product.id}
-              href={whatsappLink}
+          {product.inStock !== false && (
+            <button
+              type="button"
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
               style={{ backgroundColor: primaryColor }}
-            />
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Order
+            </button>
           )}
+
+          <ProductShareLinks title={product.name} url={canonical} className="mt-6" />
         </div>
       </section>
     </main>
