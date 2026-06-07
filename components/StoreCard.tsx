@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Star, Package, BadgeCheck } from "lucide-react";
 import type { Store } from "@/lib/types";
+import { marketplaceStorePlaceLabel } from "@/lib/storefront";
 
 interface StoreCardProps {
   store: Store;
@@ -25,6 +26,8 @@ function getCategoryStyle(category: string) {
 }
 
 export default function StoreCard({ store, className = "" }: StoreCardProps) {
+  const place = marketplaceStorePlaceLabel(store);
+
   return (
     <Link
       href={`/store/${store.slug}`}
@@ -86,7 +89,7 @@ export default function StoreCard({ store, className = "" }: StoreCardProps) {
         <div className="flex items-center justify-between text-xs text-zinc-500">
           <span className="flex items-center gap-1">
             <MapPin className="w-3 h-3" />
-            {store.location}
+            <span className="line-clamp-2">{place || "Nigeria"}</span>
           </span>
           <div className="flex items-center gap-3">
             {store.rating && (

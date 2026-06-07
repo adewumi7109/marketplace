@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { cache } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -18,11 +19,14 @@ import { ProductViewTracker } from "@/components/ProductEngagement";
 import ProductShareLinks from "@/components/ProductShareLinks";
 import { formatPrice, getStoreProductBySlug } from "@/lib/api";
 import { getSiteUrl } from "@/lib/storefront";
+import { productCategorySegment } from "@/lib/productRoutes";
 
 export const dynamic = "force-dynamic";
 
+const getProduct = cache(getStoreProductBySlug);
+
 interface Props {
-  params: Promise<{ storeSlug: string; productSlug: string }>;
+  params: Promise<{ storeSlug: string; category?: string; productSlug: string }>;
 }
 
 function imagesFor(product: Awaited<ReturnType<typeof getStoreProductBySlug>>) {
@@ -36,17 +40,21 @@ function locationLabel(product: Awaited<ReturnType<typeof getStoreProductBySlug>
     .join(", ");
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMarketplaceProductMetadata({ params }: Props): Promise<Metadata> {
   const { storeSlug, productSlug } = await params;
 
   try {
-    const product = await getStoreProductBySlug(storeSlug, productSlug);
+    const product = await getProduct(storeSlug, productSlug);
+    const canonical = `${getSiteUrl()}/products/${storeSlug}/${productCategorySegment(product)}/${product.slug || product.id}`;
+
     return {
       title: `${product.name} in Nigeria`,
       description: product.description || `View ${product.name} from ${product.store?.name || "a local store"}.`,
+      alternates: { canonical },
       openGraph: {
         title: product.name,
         description: product.description || undefined,
+        url: canonical,
         images: product.imageUrl || product.images?.[0] ? [product.imageUrl || product.images?.[0] || ""] : undefined,
       },
     };
@@ -57,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MarketplaceProductPage({ params }: Props) {
   const { storeSlug, productSlug } = await params;
-  const product = await getStoreProductBySlug(storeSlug, productSlug).catch(() => null);
+  const product = await getProduct(storeSlug, productSlug).catch(() => null);
 
   if (!product) notFound();
 
@@ -66,7 +74,7 @@ export default async function MarketplaceProductPage({ params }: Props) {
   const mainImage = images[0] || null;
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
-  const canonical = `${getSiteUrl()}/products/${storeSlug}/${product.slug || product.id}`;
+  const canonical = `${getSiteUrl()}/products/${storeSlug}/${productCategorySegment(product)}/${product.slug || product.id}`;
 
   return (
     <div className="min-h-screen bg-white text-zinc-950">
@@ -76,10 +84,10 @@ export default async function MarketplaceProductPage({ params }: Props) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primary"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/20 bg-white text-zinc-700 transition hover:text-primary"
+            aria-label="Back"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to marketplace
           </Link>
           {store && (
             <Link

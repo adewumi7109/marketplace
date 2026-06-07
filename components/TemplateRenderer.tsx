@@ -10,6 +10,7 @@ interface TemplateRendererProps {
   onSearchChange?: (value: string) => void;
   onCategoryChange?: (value: string) => void;
   onProductClick?: (product: Product) => void;
+  onProductPrefetch?: (product: Product) => void;
 }
 
 export default function TemplateRenderer({
@@ -21,6 +22,7 @@ export default function TemplateRenderer({
   onSearchChange,
   onCategoryChange,
   onProductClick,
+  onProductPrefetch,
 }: TemplateRendererProps) {
   return (
     <GeneralTemplate
@@ -32,6 +34,7 @@ export default function TemplateRenderer({
       onSearchChange={onSearchChange}
       onCategoryChange={onCategoryChange}
       onProductClick={onProductClick}
+      onProductPrefetch={onProductPrefetch}
     />
   );
 }

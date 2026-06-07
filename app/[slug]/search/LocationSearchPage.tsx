@@ -8,6 +8,7 @@ import FilterSidebar from "@/components/FilterSidebar";
 import ProductCard from "@/components/ProductCard";
 import type { LocationSelection } from "@/components/SearchBar";
 import { useLocations, useProductCategories, useProducts } from "@/lib/hooks";
+import { marketplaceProductPath } from "@/lib/productRoutes";
 import { filterQueryString, locationPathSlug } from "@/lib/routes";
 import { slugify, titleFromSlug } from "@/lib/slug";
 import type { Category, Product } from "@/lib/types";
@@ -93,8 +94,16 @@ export default function LocationSearchPage({ params }: Props) {
 
   const openMarketplaceProduct = useCallback(
     (product: Product) => {
-      if (!product.store?.slug || !product.slug) return;
-      router.push(`/products/${product.store.slug}/${product.slug}`);
+      const path = marketplaceProductPath(product);
+      if (path) router.push(path);
+    },
+    [router]
+  );
+
+  const prefetchMarketplaceProduct = useCallback(
+    (product: Product) => {
+      const path = marketplaceProductPath(product);
+      if (path) router.prefetch(path);
     },
     [router]
   );
@@ -219,6 +228,7 @@ export default function LocationSearchPage({ params }: Props) {
                     storePhone={product.store?.phone ?? ""}
                     cardStyle="compact"
                     onProductClick={openMarketplaceProduct}
+                    onProductPrefetch={prefetchMarketplaceProduct}
                   />
                 ))}
               </div>

@@ -10,6 +10,7 @@ import { useProductCategories, useProducts } from "@/lib/hooks";
 import type { Category, Product } from "@/lib/types";
 import { useCurrentLocation } from "@/lib/userLocation";
 import { slugify } from "@/lib/slug";
+import { marketplaceProductPath } from "@/lib/productRoutes";
 
 const HERO_CATEGORIES = ["Fashion", "Food", "Electronics", "General"];
 
@@ -93,8 +94,16 @@ export default function MarketplacePage() {
 
   const openProduct = useCallback(
     (product: Product) => {
-      if (!product.store?.slug || !product.slug) return;
-      router.push(`/products/${product.store.slug}/${product.slug}`);
+      const path = marketplaceProductPath(product);
+      if (path) router.push(path);
+    },
+    [router]
+  );
+
+  const prefetchProduct = useCallback(
+    (product: Product) => {
+      const path = marketplaceProductPath(product);
+      if (path) router.prefetch(path);
     },
     [router]
   );
@@ -357,6 +366,7 @@ useEffect(() => {
                         cardStyle="compact"
                         showInStock={variant !== "fashion"}
                         onProductClick={openProduct}
+                        onProductPrefetch={prefetchProduct}
                       />
                     </div>
                   );

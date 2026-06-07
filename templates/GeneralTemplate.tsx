@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import type { Product, Store } from "@/lib/types";
-import { getStorePrimaryColor } from "@/lib/storefront";
+import { getStorePrimaryColor, storeAddressLabel } from "@/lib/storefront";
 
 interface TemplateProps {
   store: Store;
@@ -24,6 +24,7 @@ interface TemplateProps {
   onSearchChange?: (value: string) => void;
   onCategoryChange?: (value: string) => void;
   onProductClick?: (product: Product) => void;
+  onProductPrefetch?: (product: Product) => void;
 }
 
 const defaultBannerText = "Welcome to our store - explore amazing products today";
@@ -37,6 +38,7 @@ export default function GeneralTemplate({
   onSearchChange,
   onCategoryChange,
   onProductClick,
+  onProductPrefetch,
 }: TemplateProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const primaryColor = getStorePrimaryColor(store);
@@ -50,7 +52,7 @@ export default function GeneralTemplate({
   const featured = products.slice(0, 3);
   const storefrontUrl = `/store/${store.slug}`;
   const bannerText = store.bannerText?.trim() || defaultBannerText;
-  const storeAddress = store.storeAddress?.trim() || store.address?.trim() || "";
+  const storeAddress = storeAddressLabel(store);
 
   return (
     <div
@@ -221,6 +223,7 @@ export default function GeneralTemplate({
                 primaryColor={primaryColor}
                 showLocation={false}
                 onProductClick={onProductClick}
+                onProductPrefetch={onProductPrefetch}
               />
             ))}
           </div>
@@ -286,6 +289,7 @@ export default function GeneralTemplate({
                 primaryColor={primaryColor}
                 showLocation={false}
                 onProductClick={onProductClick}
+                onProductPrefetch={onProductPrefetch}
               />
             ))}
           </div>

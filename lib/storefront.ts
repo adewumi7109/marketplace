@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { Product, Store } from "@/lib/types";
+import { productCategorySegment } from "@/lib/productRoutes";
 
 const DEFAULT_STORE_COLOR = "#2563eb";
 
@@ -60,6 +61,20 @@ export function storeLocationLabel(store?: Store | null) {
   );
 }
 
+export function storeAddressLabel(store?: Store | null) {
+  return store?.storeAddress?.trim() || store?.address?.trim() || "";
+}
+
+export function marketplaceStorePlaceLabel(store?: Store | null) {
+  const address = storeAddressLabel(store);
+  const location = storeLocationLabel(store);
+
+  if (!address) return location;
+  if (!location || address.toLowerCase().includes(location.toLowerCase())) return address;
+
+  return `${address} - ${location}`;
+}
+
 export function storeMetadata(store: Store): Metadata {
   const title = `${store.name} | Online Store`;
   const location = storeLocationLabel(store);
@@ -104,7 +119,7 @@ export function storeProductMetadata(product: Product, store: Store): Metadata {
   const location = storeLocationLabel(store);
   const image = absoluteUrl(product.imageUrl || product.images?.[0] || store.logoUrl || store.logo);
   const logo = absoluteUrl(store.logoUrl || store.logo);
-  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${product.slug || product.id}`;
+  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
   const description =
     product.description ||
     `View ${product.name} from ${store.name}${location ? ` in ${location}` : ""}.`;

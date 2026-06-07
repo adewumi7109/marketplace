@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { cache } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -22,13 +23,16 @@ import {
   getStorePrimaryColor,
   storeProductMetadata,
 } from "@/lib/storefront";
+import { productCategorySegment } from "@/lib/productRoutes";
 import type { Store } from "@/lib/types";
 import type { CSSProperties } from "react";
 
 export const dynamic = "force-dynamic";
 
+const getProduct = cache(getStoreProductBySlug);
+
 interface Props {
-  params: Promise<{ slug: string; productSlug: string }>;
+  params: Promise<{ slug: string; category?: string; productSlug: string }>;
 }
 
 function productImages(product: Awaited<ReturnType<typeof getStoreProductBySlug>>) {
@@ -51,11 +55,11 @@ function productStore(product: Awaited<ReturnType<typeof getStoreProductBySlug>>
   return product.store as Store;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateStoreProductMetadata({ params }: Props): Promise<Metadata> {
   const { slug, productSlug } = await params;
 
   try {
-    const product = await getStoreProductBySlug(slug, productSlug);
+    const product = await getProduct(slug, productSlug);
     return storeProductMetadata(product, productStore(product));
   } catch {
     return { title: "Product" };
@@ -64,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function StoreProductPage({ params }: Props) {
   const { slug, productSlug } = await params;
-  const product = await getStoreProductBySlug(slug, productSlug).catch(() => null);
+  const product = await getProduct(slug, productSlug).catch(() => null);
 
   if (!product) {
     notFound();
@@ -76,7 +80,7 @@ export default async function StoreProductPage({ params }: Props) {
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
   const primaryColor = getStorePrimaryColor(store);
-  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${product.slug || product.id}`;
+  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
   const imageForSeo = absoluteUrl(mainImage || store.logoUrl || store.logo);
 
   return (
@@ -155,10 +159,10 @@ export default async function StoreProductPage({ params }: Props) {
         <div className="mx-auto max-w-7xl">
           <Link
             href={`/store/${store.slug}`}
-            className="inline-flex items-center gap-2 text-sm font-bold text-zinc-600 transition hover:text-zinc-950"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:text-zinc-950"
+            aria-label="Back"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to {store.name}
           </Link>
         </div>
       </section>

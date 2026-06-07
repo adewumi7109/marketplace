@@ -6,6 +6,7 @@ import type { Store, Product } from "@/lib/types";
 import TemplateRenderer from "@/components/TemplateRenderer";
 import { StoreViewTracker } from "@/components/ProductEngagement";
 import { getStorePrimaryColor } from "@/lib/storefront";
+import { storeProductPath } from "@/lib/productRoutes";
 
 interface Props {
   store: Store;
@@ -57,6 +58,8 @@ export default function StorePageClient({ store, products, initialCategory = "" 
     });
   }, [products, search, category]);
 
+  const productPath = (product: Product) => storeProductPath(store.slug, product);
+
   useEffect(() => {
     const root = document.documentElement;
     const previousPrimary = root.style.getPropertyValue("--primary-color");
@@ -93,7 +96,10 @@ export default function StorePageClient({ store, products, initialCategory = "" 
         onSearchChange={setSearch}
         onCategoryChange={setCategory}
         onProductClick={(product) => {
-          router.push(`/store/${store.slug}/products/${product.slug || product.id}`);
+          router.push(productPath(product));
+        }}
+        onProductPrefetch={(product) => {
+          router.prefetch(productPath(product));
         }}
       />
     </>

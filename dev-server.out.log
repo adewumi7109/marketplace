@@ -6,47 +6,13 @@
 - Local:         http://localhost:3000
 - Network:       http://0.0.0.0:3000
 - Environments: .env
-✓ Ready in 730ms
+✓ Ready in 4.6s
 Creating turbopack project {
   dir: 'C:\\Users\\user\\Desktop\\Projects\\marketplace-frontend',
   testMode: true
 }
 
- GET /dashboard/settings 200 in 764ms (next.js: 359ms, application-code: 405ms)
- GET /store/adexcico/products/hp-840-g1 200 in 8.5s (next.js: 1733ms, application-code: 6.7s)
- GET / 200 in 271ms (next.js: 64ms, application-code: 207ms)
- GET /favicon.ico 200 in 1916ms (next.js: 1659ms, application-code: 257ms)
- GET /login 200 in 65ms (next.js: 38ms, application-code: 27ms)
- GET /favicon.ico 200 in 236ms (next.js: 22ms, application-code: 214ms)
- GET /dashboard 200 in 70ms (next.js: 38ms, application-code: 32ms)
- GET /favicon.ico 200 in 216ms (next.js: 20ms, application-code: 196ms)
- GET /dashboard/products 200 in 70ms (next.js: 38ms, application-code: 32ms)
- GET /favicon.ico 200 in 200ms (next.js: 19ms, application-code: 182ms)
- GET /dashboard/products 200 in 889ms (next.js: 7ms, application-code: 882ms)
- GET /dashboard/settings 200 in 38ms (next.js: 7ms, application-code: 32ms)
- GET /favicon.ico 200 in 244ms (next.js: 20ms, application-code: 225ms)
- GET /dashboard/products 200 in 42ms (next.js: 5ms, application-code: 38ms)
- GET /favicon.ico 200 in 195ms (next.js: 14ms, application-code: 181ms)
- GET /dashboard/products/new 200 in 80ms (next.js: 48ms, application-code: 32ms)
- GET /favicon.ico 200 in 311ms (next.js: 21ms, application-code: 291ms)
- GET /favicon.ico 200 in 257ms (next.js: 39ms, application-code: 218ms)
- GET /store/adexcico 200 in 9.7s (next.js: 1157ms, application-code: 8.5s)
- GET /store/adexcico/products/hp-840-g1 200 in 13.2s (next.js: 16ms, application-code: 13.2s)
- GET /_next/image?url=https%3A%2F%2Fdsnlefsxybdgsnqijegg.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fuploads%2Fproducts%2F1780742467825-26a68da9-3c3e-4c40-af10-2f242f91ed71.png&w=750&q=75 500 in 7.3s (next.js: 7.2s, application-code: 54ms)
- GET /_next/image?url=https%3A%2F%2Fdsnlefsxybdgsnqijegg.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fuploads%2Fproducts%2F1780742467825-26a68da9-3c3e-4c40-af10-2f242f91ed71.png&w=750&q=75 500 in 7.3s (next.js: 7.2s, application-code: 54ms)
- GET /_next/image?url=https%3A%2F%2Fdsnlefsxybdgsnqijegg.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fuploads%2Fproducts%2F1780742467827-01e271b6-fef1-4caf-882c-af8d7a0e4cd7.png&w=750&q=75 500 in 7.0s (next.js: 7.0s, application-code: 12ms)
- GET /_next/image?url=https%3A%2F%2Fdsnlefsxybdgsnqijegg.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fuploads%2Fproducts%2F1780742467827-01e271b6-fef1-4caf-882c-af8d7a0e4cd7.png&w=750&q=75 500 in 7.0s (next.js: 7.0s, application-code: 12ms)
- GET /dashboard 200 in 62ms (next.js: 10ms, application-code: 52ms)
- GET /favicon.ico 200 in 618ms (next.js: 55ms, application-code: 563ms)
- GET /dashboard/products 200 in 112ms (next.js: 9ms, application-code: 103ms)
- GET /favicon.ico 200 in 278ms (next.js: 32ms, application-code: 246ms)
- GET /dashboard/settings 200 in 59ms (next.js: 9ms, application-code: 50ms)
- GET /favicon.ico 200 in 301ms (next.js: 52ms, application-code: 249ms)
- GET /dashboard/products 200 in 47ms (next.js: 6ms, application-code: 41ms)
- GET /favicon.ico 200 in 443ms (next.js: 26ms, application-code: 417ms)
- GET /dashboard 200 in 48ms (next.js: 8ms, application-code: 39ms)
- GET /favicon.ico 200 in 393ms (next.js: 26ms, application-code: 368ms)
- GET /dashboard/products 200 in 42ms (next.js: 6ms, application-code: 36ms)
- GET /favicon.ico 200 in 307ms (next.js: 26ms, application-code: 281ms)
- GET /dashboard/settings 200 in 83ms (next.js: 9ms, application-code: 74ms)
- GET /favicon.ico 200 in 331ms (next.js: 9ms, application-code: 322ms)
+○ Compiling /products/[storeSlug]/[category]/[productSlug] ...
+ GET /products/adexcico/smartphones/hp-840-g1 200 in 12.6s
+ GET /store/adexcico/products/smartphones/hp-840-g1 200 in 12.8s
+ GET /products/adexcico/smartphones/hp-840-g1 200 in 7.1s (next.js: 782ms, application-code: 6.3s)

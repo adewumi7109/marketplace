@@ -27,6 +27,7 @@ import {
   updateStore,
 } from "@/lib/api";
 import { useCategories, useLocations, useMe, useProductCategories, useSellerAnalytics, useSellerProducts, useTemplates } from "@/lib/hooks";
+import { storeProductPath } from "@/lib/productRoutes";
 import type { Location, Product, Store } from "@/lib/types";
 import MetricCard from "./MetricCard";
 import SellerSidebar, { type DashboardView } from "./SellerSidebar";
@@ -116,25 +117,32 @@ function initials(name?: string) {
     .toUpperCase();
 }
 
-function productFormData(
+function productPayload(
   form: ProductFormState,
   options: { storeId?: string; includeStoreId?: boolean }
 ) {
-  const data = new FormData();
-  data.set("name", form.name.trim());
-  data.set("description", form.description.trim());
-  data.set("price", String(Number(form.price)));
-  if (form.categoryId) data.set("categoryId", form.categoryId);
-  data.set("inStock", "true");
-  data.set("pushToMarketplace", String(form.pushToMarketplace));
-  if (form.pushToMarketplace && form.marketplaceCategoryId) {
-    data.set("marketplaceCategoryId", form.marketplaceCategoryId);
-  }
-  if (form.locationId) data.set("locationId", form.locationId);
+  const payload = {
+    name: form.name.trim(),
+    description: form.description.trim(),
+    price: Number(form.price),
+    ...(form.categoryId ? { categoryId: form.categoryId } : {}),
+    inStock: true,
+    pushToMarketplace: form.pushToMarketplace,
+    ...(form.pushToMarketplace && form.marketplaceCategoryId
+      ? { marketplaceCategoryId: form.marketplaceCategoryId }
+      : {}),
+    ...(form.locationId ? { locationId: form.locationId } : {}),
+    ...(options.includeStoreId && options.storeId ? { storeId: options.storeId } : {}),
+  };
 
-  if (options.includeStoreId && options.storeId) {
-    data.set("storeId", options.storeId);
+  if (form.images.length === 0) {
+    return payload;
   }
+
+  const data = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    data.set(key, String(value));
+  });
 
   form.images.slice(0, 3).forEach((image) => {
     data.append("images", image);
@@ -525,12 +533,12 @@ export default function DashboardClient({
       if (editingProduct) {
         await updateProduct(
           editingProduct.id,
-          productFormData(productForm, { includeStoreId: false })
+          productPayload(productForm, { includeStoreId: false })
         );
         setNotice("Product updated.");
       } else {
         await createSellerProduct(
-          productFormData(productForm, { storeId: selectedStore.id, includeStoreId: true })
+          productPayload(productForm, { storeId: selectedStore.id, includeStoreId: true })
         );
         setNotice("Product added.");
       }
@@ -632,7 +640,7 @@ export default function DashboardClient({
   async function copyOrderLink(product: Product) {
     const link =
       selectedStore && product.slug
-        ? `${window.location.origin}/store/${selectedStore.slug}/products/${product.slug}`
+        ? `${window.location.origin}${storeProductPath(selectedStore.slug, product)}`
         : `${window.location.origin}/store/${selectedStore?.slug || ""}`;
     await window.navigator.clipboard.writeText(link);
     setCopiedProductId(product.id);
@@ -812,7 +820,7 @@ export default function DashboardClient({
                               <td className="px-4 py-4">
                                 <div className="flex items-center gap-2">
                                   <Link
-                                    href={`/store/${selectedStore?.slug}/products/${product.slug || product.id}`}
+                                    href={selectedStore ? storeProductPath(selectedStore.slug, product) : "#"}
                                     className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                                   >
                                     <ArrowUpRight className="h-3.5 w-3.5" />

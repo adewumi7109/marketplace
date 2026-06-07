@@ -16,6 +16,7 @@ interface ProductCardProps {
   showLocation?: boolean;
   primaryColor?: string;
   onProductClick?: (product: Product) => void;
+  onProductPrefetch?: (product: Product) => void;
 }
 
 export default function ProductCard({
@@ -31,6 +32,7 @@ export default function ProductCard({
   showLocation = true,
   primaryColor,
   onProductClick,
+  onProductPrefetch,
 }: ProductCardProps) {
   const price = formatPrice(product.price, product.currency);
 
@@ -132,6 +134,8 @@ export default function ProductCard({
       role={onProductClick ? "button" : undefined}
       tabIndex={onProductClick ? 0 : undefined}
       onClick={openProduct}
+      onPointerEnter={() => onProductPrefetch?.(product)}
+      onTouchStart={() => onProductPrefetch?.(product)}
       onKeyDown={(e) => {
         if (
           onProductClick &&
@@ -189,8 +193,12 @@ export default function ProductCard({
             {product.name}
           </h3>
 
-          {product.description && !isCompact && (
-            <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-zinc-500 sm:text-xs">
+          {product.description && (
+            <p
+              className={`mt-1.5 line-clamp-2 leading-relaxed text-zinc-500 ${
+                isCompact ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-xs"
+              }`}
+            >
               {product.description}
             </p>
           )}
