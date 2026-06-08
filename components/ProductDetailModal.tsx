@@ -17,7 +17,7 @@ interface ProductDetailModalProps {
 export default function ProductDetailModal({
   product,
   storePhone,
-  primaryColor = "#2563eb",
+  primaryColor = "#035722",
   onClose,
 }: ProductDetailModalProps) {
   const [detail, setDetail] = useState<Product | null>(product);

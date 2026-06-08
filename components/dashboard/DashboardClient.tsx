@@ -9,6 +9,7 @@ import {
   Edit3,
   Eye,
   Loader2,
+  Menu,
   Package,
   Plus,
   Search,
@@ -86,6 +87,7 @@ const initialProductForm: ProductFormState = {
 const MAX_PRODUCT_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_PRODUCT_IMAGE_COUNT = 3;
 const PRODUCT_IMAGE_MAX_DIMENSION = 2000;
+const DEFAULT_STORE_PRIMARY_COLOR = "#035722";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function productImageSizeLabel(bytes: number) {
@@ -109,7 +111,7 @@ function emptySettings(store?: Store): SettingsFormState {
     name: store?.name || "",
     slug: store?.slug || "",
     phone: store?.phone || "",
-    primaryColor: store?.primaryColor || "#2563eb",
+    primaryColor: store?.primaryColor || DEFAULT_STORE_PRIMARY_COLOR,
     state: store?.locationData?.state || store?.state || "",
     city: store?.locationData?.city || store?.city || "",
     locationId: store?.locationId || store?.locationData?.id || "",
@@ -258,6 +260,7 @@ export default function DashboardClient({
 }) {
   const activeView = initialView;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedStoreSlug, setSelectedStoreSlug] = useState("");
   const [productForm, setProductForm] = useState<ProductFormState>(initialProductForm);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -349,7 +352,7 @@ export default function DashboardClient({
     [settingsForm.city, settingsForm.state, stateLocations]
   );
   const needsValidCity = Boolean(settingsForm.state && settingsForm.city && !exactCity);
-  const hasValidPrimaryColor = isHexColor(settingsForm.primaryColor || "#2563eb");
+  const hasValidPrimaryColor = isHexColor(settingsForm.primaryColor || DEFAULT_STORE_PRIMARY_COLOR);
 
   const visibleProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -372,6 +375,17 @@ export default function DashboardClient({
       window.location.replace("/login");
     }
   }, []);
+
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileSidebarOpen]);
 
   useEffect(() => {
     setSettingsForm(emptySettings(selectedStore));
@@ -738,7 +752,7 @@ export default function DashboardClient({
         name: settingsForm.name.trim(),
         slug: settingsForm.slug.trim(),
         phone: settingsForm.phone.trim(),
-        primaryColor: settingsForm.primaryColor || "#2563eb",
+        primaryColor: settingsForm.primaryColor || DEFAULT_STORE_PRIMARY_COLOR,
         description: settingsForm.description.trim(),
         address: settingsForm.storeAddress.trim(),
         storeAddress: settingsForm.storeAddress.trim(),
@@ -820,22 +834,34 @@ export default function DashboardClient({
         user={user}
         activeView={activeView}
         collapsed={sidebarCollapsed}
+        mobileOpen={mobileSidebarOpen}
         onChangeView={() => undefined}
         onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
         onLogout={logout}
       />
 
       <div className={`min-w-0 transition-[margin] ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"}`}>
         <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 xl:px-8 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-primary">Seller dashboard</p>
-              <h1 className="mt-1 font-display text-2xl font-bold tracking-tight md:text-3xl">
-                {activeView === "overview" && "Overview"}
-                {activeView === "products" && "Products"}
-                {activeView === "categories" && "Store categories"}
-                {activeView === "settings" && "Settings"}
-              </h1>
+            <div className="flex w-full min-w-0 items-center justify-between gap-3 md:w-auto">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-primary">Seller dashboard</p>
+                <h1 className="mt-1 font-display text-2xl font-bold tracking-tight md:text-3xl">
+                  {activeView === "overview" && "Overview"}
+                  {activeView === "products" && "Products"}
+                  {activeView === "categories" && "Store categories"}
+                  {activeView === "settings" && "Settings"}
+                </h1>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-primary/30 hover:text-primary lg:hidden"
+                aria-label="Open dashboard menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -866,6 +892,27 @@ export default function DashboardClient({
         </header>
 
         <div className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6 xl:px-8">
+          {!selectedStore && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-4 text-sm text-zinc-700">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-zinc-950">Configure your store to continue</p>
+                  <p className="mt-1 leading-6">
+                    Add your store details, location, contact number, and brand color before managing products.
+                  </p>
+                </div>
+                {activeView !== "settings" && (
+                  <Link
+                    href="/dashboard/settings"
+                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90"
+                  >
+                    Configure store
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
           {(error || notice) && (
             <div
               className={`rounded-lg border px-4 py-3 text-sm ${
@@ -1607,7 +1654,7 @@ export default function DashboardClient({
                   <div className="mt-1 flex overflow-hidden rounded-lg border border-zinc-200 bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/10">
                     <input
                       type="color"
-                      value={settingsForm.primaryColor || "#2563eb"}
+                      value={settingsForm.primaryColor || DEFAULT_STORE_PRIMARY_COLOR}
                       onChange={(event) =>
                         setSettingsForm({ ...settingsForm, primaryColor: event.target.value })
                       }
@@ -1620,7 +1667,7 @@ export default function DashboardClient({
                         setSettingsForm({ ...settingsForm, primaryColor: event.target.value })
                       }
                       pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
-                      placeholder="#2563eb"
+                      placeholder={DEFAULT_STORE_PRIMARY_COLOR}
                       className="h-11 min-w-0 flex-1 border-l border-zinc-200 px-3 text-sm font-semibold outline-none"
                     />
                   </div>

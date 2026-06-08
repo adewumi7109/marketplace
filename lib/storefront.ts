@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { Product, Store } from "@/lib/types";
 import { productCategorySegment } from "@/lib/productRoutes";
 
-const DEFAULT_STORE_COLOR = "#2563eb";
+const DEFAULT_STORE_COLOR = "#035722";
 
 function isHexColor(value?: string | null) {
   return Boolean(value && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value));

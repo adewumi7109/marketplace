@@ -10,6 +10,7 @@ import {
   LogOut,
   Package,
   Settings,
+  X,
 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 
@@ -19,8 +20,10 @@ type SellerSidebarProps = {
   user?: UserProfile;
   activeView: DashboardView;
   collapsed: boolean;
+  mobileOpen: boolean;
   onChangeView: (view: DashboardView) => void;
   onToggleCollapsed: () => void;
+  onCloseMobile: () => void;
   onLogout: () => void;
 };
 
@@ -40,17 +43,31 @@ export default function SellerSidebar({
   user,
   activeView,
   collapsed,
+  mobileOpen,
   onChangeView,
   onToggleCollapsed,
+  onCloseMobile,
   onLogout,
 }: SellerSidebarProps) {
   return (
-    <aside
-      className={`z-30 flex border-r border-zinc-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 ${
-        collapsed ? "lg:w-20" : "lg:w-72"
-      }`}
-    >
-      <div className="flex w-full flex-col">
+    <>
+      <button
+        type="button"
+        onClick={onCloseMobile}
+        className={`fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-sm transition-opacity lg:hidden ${
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        aria-label="Close dashboard menu"
+        aria-hidden={!mobileOpen}
+        tabIndex={mobileOpen ? 0 : -1}
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(84vw,20rem)] border-r border-zinc-200 bg-white shadow-2xl shadow-zinc-950/10 transition-transform duration-300 ease-out lg:z-30 lg:w-auto lg:shadow-none lg:transition-[width] ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "lg:w-20" : "lg:w-72"} lg:translate-x-0`}
+      >
+        <div className="flex min-h-0 w-full flex-col">
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
@@ -63,13 +80,11 @@ export default function SellerSidebar({
                 priority
               />
             </span>
-            {!collapsed && (
-              <span className="min-w-0">
+            <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
                 <span className="block truncate font-display text-lg font-bold tracking-tight">
                   Seller dashboard
                 </span>
-              </span>
-            )}
+            </span>
           </Link>
 
           <button
@@ -83,15 +98,15 @@ export default function SellerSidebar({
 
           <button
             type="button"
-            onClick={onLogout}
+            onClick={onCloseMobile}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-950 lg:hidden"
-            aria-label="Sign out"
+            aria-label="Close dashboard menu"
           >
-            <LogOut className="h-4 w-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <nav className="grid grid-cols-4 gap-2 border-b border-zinc-200 p-3 lg:block lg:space-y-1 lg:border-b-0">
+        <nav className="space-y-1 p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = activeView === item.id;
@@ -100,8 +115,11 @@ export default function SellerSidebar({
               <Link
                 key={item.id}
                 href={item.href}
-                onClick={() => onChangeView(item.id)}
-                className={`flex h-11 items-center justify-center gap-3 rounded-lg px-3 text-sm font-semibold transition lg:w-full lg:justify-start ${
+                onClick={() => {
+                  onChangeView(item.id);
+                  onCloseMobile();
+                }}
+                className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${
                   active
                     ? "bg-primary/10 text-primary"
                     : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
@@ -109,22 +127,21 @@ export default function SellerSidebar({
                 title={collapsed ? item.label : undefined}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="hidden lg:inline">{item.label}</span>}
-                <span className="lg:hidden">{item.label}</span>
+                <span className={collapsed ? "lg:hidden" : ""}>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="hidden flex-1 lg:block" />
+        <div className="flex-1" />
 
-        <div className="hidden border-t border-zinc-200 p-4 lg:block">
-          {!collapsed && (
+        <div className="border-t border-zinc-200 p-4">
+          <div className={collapsed ? "lg:hidden" : ""}>
             <div className="mb-3 min-w-0">
               <p className="truncate text-sm font-semibold text-zinc-950">{user?.name || "Seller"}</p>
               <p className="truncate text-xs text-zinc-500">{user?.email}</p>
             </div>
-          )}
+          </div>
           <button
             type="button"
             onClick={onLogout}
@@ -132,10 +149,11 @@ export default function SellerSidebar({
             title={collapsed ? "Sign out" : undefined}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && "Sign out"}
+            <span className={collapsed ? "lg:hidden" : ""}>Sign out</span>
           </button>
         </div>
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   );
 }

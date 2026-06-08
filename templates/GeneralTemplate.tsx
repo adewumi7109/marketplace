@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
-import { useState } from "react";
+import type { CSSProperties, FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -10,6 +10,7 @@ import {
   Search,
   ShoppingBag,
   Sparkles,
+  X,
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import type { Product, Store } from "@/lib/types";
@@ -22,6 +23,7 @@ interface TemplateProps {
   search?: string;
   selectedCategory?: string;
   onSearchChange?: (value: string) => void;
+  onSearchSubmit?: (value: string) => void;
   onCategoryChange?: (value: string) => void;
   onProductClick?: (product: Product) => void;
   onProductPrefetch?: (product: Product) => void;
@@ -36,11 +38,14 @@ export default function GeneralTemplate({
   search = "",
   selectedCategory = "",
   onSearchChange,
+  onSearchSubmit,
   onCategoryChange,
   onProductClick,
   onProductPrefetch,
 }: TemplateProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const primaryColor = getStorePrimaryColor(store);
   const categoryNames = Array.from(
     new Set(
@@ -52,6 +57,18 @@ export default function GeneralTemplate({
   const storefrontUrl = `/store/${store.slug}`;
   const bannerText = store.bannerText?.trim() || defaultBannerText;
   const storeAddress = storeAddressLabel(store);
+  const hasMobilePanel = mobileSearchOpen || mobileMenuOpen;
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSearchSubmit?.(search);
+    setMobileSearchOpen(false);
+  }
+
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    mobileSearchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
 
   return (
     <div
@@ -88,15 +105,26 @@ export default function GeneralTemplate({
             <a href="#about" className="transition hover:text-zinc-950">About</a>
           </div>
 
-          <div className="hidden w-full max-w-sm items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 md:flex">
-            <Search className="h-4 w-4 text-zinc-400" />
+          <form
+            onSubmit={submitSearch}
+            className="hidden w-full max-w-sm items-center rounded-md border border-zinc-200 bg-zinc-50 pl-3 shadow-sm transition focus-within:border-zinc-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-zinc-950/5 md:flex"
+          >
+            <Search className="h-4 w-4 shrink-0 text-zinc-400" />
             <input
               value={search}
               onChange={(event) => onSearchChange?.(event.target.value)}
-              placeholder="Search products"
-              className="ml-2 w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400"
+              placeholder={`Search ${store.name}`}
+              className="ml-2 h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400"
             />
-          </div>
+            <button
+              type="submit"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-r-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+              aria-label="Search store"
+              title="Search store"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </form>
 
           <a
             href="#products"
@@ -109,31 +137,65 @@ export default function GeneralTemplate({
 
           <button
             type="button"
-            onClick={() => setMobileMenuOpen((value) => !value)}
-            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-zinc-700 md:hidden"
-            aria-label="Open store menu"
+            onClick={() => {
+              setMobileSearchOpen((value) => !value);
+              setMobileMenuOpen(false);
+            }}
+            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 md:hidden"
+            aria-label={mobileSearchOpen ? "Close store search" : "Open store search"}
+            title={mobileSearchOpen ? "Close search" : "Search store"}
           >
-            <Menu className="h-5 w-5" />
+            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen((value) => !value);
+              setMobileSearchOpen(false);
+            }}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 md:hidden"
+            aria-label={mobileMenuOpen ? "Close store menu" : "Open store menu"}
+            title={mobileMenuOpen ? "Close menu" : "Menu"}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
 
-        <div className="border-t border-zinc-100 px-4 py-3 md:hidden">
-          <div className="flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5">
-            <Search className="h-4 w-4 text-zinc-400" />
-            <input
-              value={search}
-              onChange={(event) => onSearchChange?.(event.target.value)}
-              placeholder="Search products"
-              className="ml-2 w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400"
-            />
+        {hasMobilePanel && (
+          <div className="border-t border-zinc-100 px-4 py-3 md:hidden">
+            {mobileSearchOpen && (
+              <form
+                onSubmit={submitSearch}
+                className="flex items-center rounded-md border border-zinc-200 bg-zinc-50 pl-3 shadow-sm transition focus-within:border-zinc-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-zinc-950/5"
+              >
+                <Search className="h-4 w-4 shrink-0 text-zinc-400" />
+                <input
+                  ref={mobileSearchInputRef}
+                  value={search}
+                  onChange={(event) => onSearchChange?.(event.target.value)}
+                  placeholder={`Search ${store.name}`}
+                  className="ml-2 h-11 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400"
+                />
+                <button
+                  type="submit"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-r-md text-white transition hover:brightness-95"
+                  style={{ backgroundColor: primaryColor }}
+                  aria-label="Search store"
+                  title="Search store"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </form>
+            )}
+            {mobileMenuOpen && (
+              <nav className="mt-3 grid gap-2 text-sm font-semibold text-zinc-700">
+                <a href="#products" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">Products</a>
+                <a href="#about" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">About</a>
+              </nav>
+            )}
           </div>
-          {mobileMenuOpen && (
-            <nav className="mt-3 grid gap-2 text-sm font-semibold text-zinc-700">
-              <a href="#products" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">Products</a>
-              <a href="#about" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">About</a>
-            </nav>
-          )}
-        </div>
+        )}
       </header>
 
       <section className="relative overflow-hidden bg-zinc-950 text-white">

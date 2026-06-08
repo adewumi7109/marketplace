@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Store, Product } from "@/lib/types";
 import TemplateRenderer from "@/components/TemplateRenderer";
 import { StoreViewTracker } from "@/components/ProductEngagement";
@@ -24,7 +24,8 @@ function categorySlug(value: string) {
 
 export default function StorePageClient({ store, products, initialCategory = "" }: Props) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("query") || searchParams.get("q") || "");
   const initialCategoryName = useMemo(() => {
     if (!initialCategory) return "";
     const found = products.find((product) => {
@@ -60,6 +61,21 @@ export default function StorePageClient({ store, products, initialCategory = "" 
 
   const productPath = (product: Product) => storeProductPath(store.slug, product);
 
+  function submitSearch(value: string) {
+    const term = value.trim();
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete("q");
+    if (term) {
+      params.set("query", term);
+    } else {
+      params.delete("query");
+    }
+
+    const queryString = params.toString();
+    router.push(`/store/${store.slug}${queryString ? `?${queryString}` : ""}#products`);
+  }
+
   useEffect(() => {
     const root = document.documentElement;
     const previousPrimary = root.style.getPropertyValue("--primary-color");
@@ -94,6 +110,7 @@ export default function StorePageClient({ store, products, initialCategory = "" 
         selectedCategory={category}
         allProducts={products}
         onSearchChange={setSearch}
+        onSearchSubmit={submitSearch}
         onCategoryChange={setCategory}
         onProductClick={(product) => {
           router.push(productPath(product));
