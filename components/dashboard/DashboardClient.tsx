@@ -30,7 +30,6 @@ import {
   formatProductCondition,
 } from "@/lib/api";
 import { useCategories, useLocations, useMe, useProductCategories, useSellerAnalytics, useSellerProducts, useTemplates } from "@/lib/hooks";
-import { storeProductPath } from "@/lib/productRoutes";
 import { getStoreProductUrl, getStoreUrl } from "@/lib/storefront";
 import type { Location, Product, ProductCategory, ProductCondition, Store } from "@/lib/types";
 import MetricCard from "./MetricCard";
@@ -855,7 +854,7 @@ export default function DashboardClient({
               )}
               {selectedStore && (
                 <Link
-                  href={`/store/${selectedStore.slug}`}
+                  href={getStoreUrl(selectedStore.slug)}
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   View store
@@ -965,7 +964,7 @@ export default function DashboardClient({
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <Link
-                                href={selectedStore ? storeProductPath(selectedStore.slug, product) : "#"}
+                                href={selectedStore ? getStoreProductUrl(selectedStore, product) : "#"}
                                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                               >
                                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -1074,7 +1073,7 @@ export default function DashboardClient({
                               <td className="px-4 py-4">
                                 <div className="flex items-center gap-2">
                                   <Link
-                                    href={selectedStore ? storeProductPath(selectedStore.slug, product) : "#"}
+                                    href={selectedStore ? getStoreProductUrl(selectedStore, product) : "#"}
                                     className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
                                   >
                                     <ArrowUpRight className="h-3.5 w-3.5" />
