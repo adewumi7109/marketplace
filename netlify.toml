@@ -4,9 +4,6 @@
 
 [build.environment]
   NODE_VERSION = "20.18.1"
-  NEXT_PUBLIC_API_URL = "https://marketplaceapi1.netlify.app/api"
-  NEXT_PUBLIC_SITE_URL = "https://marktplace-test.netlify.app"
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID = "231405555061-p63sb4nbq5ijoepk8vpq2aapv7tpv915.apps.googleusercontent.com"
 
 [[headers]]
   for = "/login"

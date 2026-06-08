@@ -27,8 +27,7 @@ import type {
   UserProfile,
 } from "./types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://marketplaceapi1.netlify.app/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
 const TOKEN_STORAGE_KEY = "marketplace_access_token";
 
 type ApiFetchOptions = RequestInit & {
@@ -51,6 +50,13 @@ export class ApiRequestError extends Error {
 }
 
 function cleanBaseUrl() {
+  if (!API_BASE_URL) {
+    throw new ApiRequestError(
+      "Missing NEXT_PUBLIC_API_URL. Set it in your deployment environment variables.",
+      0
+    );
+  }
+
   return API_BASE_URL.replace(/\/+$/, "");
 }
 

@@ -106,6 +106,8 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.
 
 Deploy the API project separately first, then point `NEXT_PUBLIC_API_URL` to that API domain. For Google sign-in, add your Netlify domain to the Google OAuth allowed origins.
 
+For Vercel, set the same variables in Project Settings -> Environment Variables for each environment you deploy to. `NEXT_PUBLIC_API_URL` is required at build time; the app intentionally has no hardcoded production API fallback.
+
 ---
 
 ## Template System
