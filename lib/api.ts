@@ -1004,6 +1004,16 @@ export async function getCurrentLocation(lat: number, lng: number) {
 
 export const swrFetcher = async <T>(url: string) => apiFetch<T>(url);
 
+function normalizeWhatsAppPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.startsWith("00")) return digits.slice(2);
+  if (digits.startsWith("0")) return `234${digits.slice(1)}`;
+  if (digits.length === 10) return `234${digits}`;
+
+  return digits;
+}
+
 export function buildWhatsAppLink(
   phone: string,
   productName: string,
@@ -1016,7 +1026,7 @@ export function buildWhatsAppLink(
   const text = encodeURIComponent(
     `Hi! I want to order *${productName}* - ${currency} ${price.toLocaleString("en-NG")}`
   );
-  const cleaned = phone.replace(/\D/g, "");
+  const cleaned = normalizeWhatsAppPhone(phone);
   return `https://wa.me/${cleaned}?text=${text}`;
 }
 
