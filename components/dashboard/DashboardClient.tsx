@@ -31,6 +31,7 @@ import {
 } from "@/lib/api";
 import { useCategories, useLocations, useMe, useProductCategories, useSellerAnalytics, useSellerProducts, useTemplates } from "@/lib/hooks";
 import { storeProductPath } from "@/lib/productRoutes";
+import { getStoreProductUrl, getStoreUrl } from "@/lib/storefront";
 import type { Location, Product, ProductCategory, ProductCondition, Store } from "@/lib/types";
 import MetricCard from "./MetricCard";
 import SellerSidebar, { type DashboardView } from "./SellerSidebar";
@@ -796,8 +797,10 @@ export default function DashboardClient({
   async function copyOrderLink(product: Product) {
     const link =
       selectedStore && product.slug
-        ? `${window.location.origin}${storeProductPath(selectedStore.slug, product)}`
-        : `${window.location.origin}/store/${selectedStore?.slug || ""}`;
+        ? getStoreProductUrl(selectedStore, product)
+        : selectedStore
+        ? getStoreUrl(selectedStore.slug)
+        : window.location.origin;
     await window.navigator.clipboard.writeText(link);
     setCopiedProductId(product.id);
     window.setTimeout(() => setCopiedProductId(""), 1800);

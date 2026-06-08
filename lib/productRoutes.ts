@@ -21,7 +21,26 @@ export function marketplaceProductPath(product: Product) {
   return `/products/${product.store.slug}/${productCategorySegment(product)}/${product.slug}`;
 }
 
+export function isCurrentStoreSubdomain(storeSlug: string) {
+  if (typeof window === "undefined" || !storeSlug) return false;
+
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "kombomart.com";
+  const hostname = window.location.hostname.toLowerCase();
+  const slug = storeSlug.toLowerCase();
+
+  return (
+    hostname === `${slug}.${rootDomain}` ||
+    hostname === `www.${slug}.${rootDomain}`
+  );
+}
+
+export function storeHomePath(storeSlug: string) {
+  if (!storeSlug) return "";
+  return isCurrentStoreSubdomain(storeSlug) ? "/" : `/store/${storeSlug}`;
+}
+
 export function storeProductPath(storeSlug: string, product: Product) {
   if (!storeSlug || !(product.slug || product.id)) return "";
-  return `/store/${storeSlug}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+  const productPath = `/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+  return isCurrentStoreSubdomain(storeSlug) ? productPath : `/store/${storeSlug}${productPath}`;
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Store } from "@/lib/types";
+import { getStoreUrl } from "@/lib/storefront";
 import DataTable, { type DataTableColumn } from "./DataTable";
 import StatusBadge from "./StatusBadge";
 
@@ -54,7 +55,7 @@ export default function StoreTable({ stores, selectedSlug, onSelect }: StoreTabl
       className: "text-right",
       render: (store) => (
         <Link
-          href={`/store/${store.slug}`}
+          href={getStoreUrl(store.slug)}
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 transition hover:border-primary/30 hover:text-primary"
         >
           Open

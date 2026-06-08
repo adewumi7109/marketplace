@@ -33,6 +33,30 @@ export function getSiteUrl() {
   ).replace(/\/+$/, "");
 }
 
+export function getRootDomain() {
+  return process.env.NEXT_PUBLIC_ROOT_DOMAIN || "kombomart.com";
+}
+
+export function getStoreUrl(storeSlug: string) {
+  const siteUrl = getSiteUrl();
+  const rootDomain = getRootDomain();
+
+  try {
+    const url = new URL(siteUrl);
+    if (url.hostname === rootDomain || url.hostname.endsWith(`.${rootDomain}`)) {
+      return `${url.protocol}//${storeSlug}.${rootDomain}`;
+    }
+  } catch {
+    return `${siteUrl}/store/${storeSlug}`;
+  }
+
+  return `${siteUrl}/store/${storeSlug}`;
+}
+
+export function getStoreProductUrl(store: Store, product: Product) {
+  return `${getStoreUrl(store.slug)}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+}
+
 export function absoluteUrl(path?: string | null) {
   if (!path) return undefined;
 
@@ -83,7 +107,7 @@ export function storeMetadata(store: Store): Metadata {
     `Shop products from ${store.name}${location ? ` in ${location}` : ""}.`;
   const logo = absoluteUrl(store.logoUrl || store.logo);
   const banner = absoluteUrl(store.bannerUrl || store.banner || store.logoUrl || store.logo);
-  const canonical = `${getSiteUrl()}/store/${store.slug}`;
+  const canonical = getStoreUrl(store.slug);
 
   return {
     title,
@@ -119,7 +143,7 @@ export function storeProductMetadata(product: Product, store: Store): Metadata {
   const location = storeLocationLabel(store);
   const image = absoluteUrl(product.imageUrl || product.images?.[0] || store.logoUrl || store.logo);
   const logo = absoluteUrl(store.logoUrl || store.logo);
-  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+  const canonical = getStoreProductUrl(store, product);
   const description =
     product.description ||
     `View ${product.name} from ${store.name}${location ? ` in ${location}` : ""}.`;

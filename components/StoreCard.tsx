@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Star, Package, BadgeCheck } from "lucide-react";
 import type { Store } from "@/lib/types";
-import { marketplaceStorePlaceLabel } from "@/lib/storefront";
+import { getStoreUrl, marketplaceStorePlaceLabel } from "@/lib/storefront";
 
 interface StoreCardProps {
   store: Store;
@@ -30,7 +30,7 @@ export default function StoreCard({ store, className = "" }: StoreCardProps) {
 
   return (
     <Link
-      href={`/store/${store.slug}`}
+      href={getStoreUrl(store.slug)}
       className={`group block rounded-2xl bg-surface-2 border border-border overflow-hidden hover:border-brand-500/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 ${className}`}
     >
       {/* Banner */}

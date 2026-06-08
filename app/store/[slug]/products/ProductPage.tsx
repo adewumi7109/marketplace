@@ -20,11 +20,10 @@ import ProductImageGallery from "@/components/ProductImageGallery";
 import ProductOrderButton from "@/components/ProductOrderButton";
 import {
   absoluteUrl,
-  getSiteUrl,
+  getStoreProductUrl,
   getStorePrimaryColor,
   storeProductMetadata,
 } from "@/lib/storefront";
-import { productCategorySegment } from "@/lib/productRoutes";
 import type { Store } from "@/lib/types";
 import type { CSSProperties } from "react";
 
@@ -81,7 +80,7 @@ export default async function StoreProductPage({ params }: Props) {
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
   const primaryColor = getStorePrimaryColor(store);
-  const canonical = `${getSiteUrl()}/store/${store.slug}/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+  const canonical = getStoreProductUrl(store, product);
   const imageForSeo = absoluteUrl(mainImage || store.logoUrl || store.logo);
 
   return (

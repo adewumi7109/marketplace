@@ -15,7 +15,13 @@ function SilentLocationCapture() {
 
 export default function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
-  const isStorefront = pathname.startsWith("/store/");
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "kombomart.com";
+  const hostname = typeof window === "undefined" ? "" : window.location.hostname.toLowerCase();
+  const isStoreSubdomain =
+    hostname.endsWith(`.${rootDomain}`) &&
+    hostname !== rootDomain &&
+    hostname !== `www.${rootDomain}`;
+  const isStorefront = pathname.startsWith("/store/") || isStoreSubdomain;
   const isAdminSurface = pathname.startsWith("/login") || pathname.startsWith("/dashboard");
 
   if (isStorefront || isAdminSurface) {

@@ -82,6 +82,7 @@ npm run build && npm start
 ```env
 NEXT_PUBLIC_API_URL=https://your-backend-api.com
 NEXT_PUBLIC_SITE_URL=https://your-frontend-site.com
+NEXT_PUBLIC_ROOT_DOMAIN=your-root-domain.com
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```
 
@@ -100,7 +101,8 @@ Set these environment variables in Netlify:
 
 ```env
 NEXT_PUBLIC_API_URL=https://your-deployed-api.com/api
-NEXT_PUBLIC_SITE_URL=https://your-netlify-site.netlify.app
+NEXT_PUBLIC_SITE_URL=https://kombomart.com
+NEXT_PUBLIC_ROOT_DOMAIN=kombomart.com
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```
 
