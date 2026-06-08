@@ -2,9 +2,15 @@
 
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { useCurrentLocation } from "@/lib/userLocation";
 
 interface AppChromeProps {
   children: React.ReactNode;
+}
+
+function SilentLocationCapture() {
+  useCurrentLocation();
+  return null;
 }
 
 export default function AppChrome({ children }: AppChromeProps) {
@@ -18,6 +24,7 @@ export default function AppChrome({ children }: AppChromeProps) {
 
   return (
     <>
+      <SilentLocationCapture />
       <Navbar />
       <main className="pt-16">{children}</main>
       <footer className="mt-20 border-t border-primary/20 bg-white">

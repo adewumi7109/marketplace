@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCurrentLocation } from "@/lib/api"; // adjust path
+import { getCurrentLocation, saveDetectedLocation } from "@/lib/api";
 
 interface UserLocation {
   latitude: number;
@@ -13,6 +13,8 @@ interface UserAddress {
   displayName: string;
 }
 
+const LOCATION_CAPTURE_KEY = "marketplace_location_capture_done";
+
 export function useCurrentLocation() {
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
@@ -21,6 +23,10 @@ export function useCurrentLocation() {
   const [error, setError] = useState<string | null>(null);
 
   const getLocation = () => {
+    if (typeof window !== "undefined" && window.sessionStorage.getItem(LOCATION_CAPTURE_KEY)) {
+      return;
+    }
+
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by this browser.");
       return;
@@ -39,7 +45,17 @@ export function useCurrentLocation() {
         try {
           const res = await getCurrentLocation(lat, lng);
 
-          if (res) {
+          if (res?.city && res.state) {
+            void saveDetectedLocation({
+              city: res.city,
+              state: res.state,
+              country: res.country || "Nigeria",
+              latitude: lat,
+              longitude: lng,
+            }).catch(() => undefined);
+
+            window.sessionStorage.setItem(LOCATION_CAPTURE_KEY, "1");
+
             setUserAddress({
               city: res.city,
               state: res.state,
@@ -47,13 +63,14 @@ export function useCurrentLocation() {
               displayName: res.displayName,
             });
           }
-        } catch (err: any) {
-          setError(err.message || "Failed to fetch address");
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to fetch address");
         }
 
         setLoading(false);
       },
       (err) => {
+        window.sessionStorage.setItem(LOCATION_CAPTURE_KEY, "1");
         setError(err.message);
         setLoading(false);
       },

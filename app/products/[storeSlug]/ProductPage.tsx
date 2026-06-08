@@ -20,7 +20,7 @@ import { formatPrice, formatProductCondition, getStoreProductBySlug } from "@/li
 import { getSiteUrl } from "@/lib/storefront";
 import { productCategorySegment } from "@/lib/productRoutes";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 const getProduct = cache(getStoreProductBySlug);
 

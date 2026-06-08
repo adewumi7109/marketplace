@@ -8,7 +8,6 @@ import SearchBar, { type LocationSelection } from "@/components/SearchBar";
 import ProductCard from "@/components/ProductCard";
 import { useProductCategories, useProducts } from "@/lib/hooks";
 import type { Category, Product } from "@/lib/types";
-import { useCurrentLocation } from "@/lib/userLocation";
 import { slugify } from "@/lib/slug";
 import { marketplaceProductPath } from "@/lib/productRoutes";
 
@@ -16,7 +15,6 @@ const HERO_CATEGORIES = ["Fashion", "Food", "Electronics", "General"];
 
 export default function MarketplacePage() {
   const router = useRouter();
-  const geo = useCurrentLocation();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -155,16 +153,6 @@ export default function MarketplacePage() {
     return () => window.removeEventListener("marketplace-search", onNavbarSearch);
   }, [handleSearchChange]);
 
-  // geo location 
-
-useEffect(() => {
-  if (geo.userAddress) {
-    console.log("User city:", geo.userAddress.city);
-    console.log("User state:", geo.userAddress.state);
-    console.log("User country:", geo.userAddress.country);
-  }
-}, [geo.userAddress]);
-
   return (
     <div className="min-h-screen bg-white text-zinc-950">
     <section
@@ -174,7 +162,7 @@ useEffect(() => {
   }}
 >
   {/* Overlay */}
-  <div className="absolute inset-0 bg-primary/85" />
+  <div className="absolute inset-0 bg-primary/95" />
 
   {/* Content */}
   <div className="relative mx-auto max-w-7xl flex items-center justify-between px-4 py-16 sm:px-6 md:py-10">

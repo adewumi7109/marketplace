@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { formatPrice, getProduct, trackProductView } from "@/lib/api";
+import { formatPrice, trackProductView } from "@/lib/api";
 import ProductOrderButton from "@/components/ProductOrderButton";
 
 interface ProductDetailModalProps {
@@ -21,32 +21,13 @@ export default function ProductDetailModal({
   onClose,
 }: ProductDetailModalProps) {
   const [detail, setDetail] = useState<Product | null>(product);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
   useEffect(() => {
     if (!product) return;
-
-    let alive = true;
     setDetail(product);
     setActiveImage(0);
-    setIsLoading(true);
-
-    getProduct(product.id)
-      .then((freshProduct) => {
-        if (alive) setDetail(freshProduct);
-      })
-      .catch(() => {
-        if (alive) setDetail(product);
-      })
-      .finally(() => {
-        if (alive) setIsLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
   }, [product]);
 
   useEffect(() => {
@@ -97,7 +78,6 @@ export default function ProductDetailModal({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               Product details
             </p>
-            {isLoading && <p className="text-xs text-zinc-400">Refreshing details...</p>}
           </div>
           <button
             type="button"

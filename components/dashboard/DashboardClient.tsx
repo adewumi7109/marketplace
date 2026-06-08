@@ -20,16 +20,18 @@ import {
   createSellerProduct,
   createProductCategory,
   createStore,
+  deleteProductCategory,
   deleteProduct,
   formatPrice,
   getAccessToken,
+  updateProductCategory,
   updateProduct,
   updateStore,
   formatProductCondition,
 } from "@/lib/api";
 import { useCategories, useLocations, useMe, useProductCategories, useSellerAnalytics, useSellerProducts, useTemplates } from "@/lib/hooks";
 import { storeProductPath } from "@/lib/productRoutes";
-import type { Location, Product, ProductCondition, Store } from "@/lib/types";
+import type { Location, Product, ProductCategory, ProductCondition, Store } from "@/lib/types";
 import MetricCard from "./MetricCard";
 import SellerSidebar, { type DashboardView } from "./SellerSidebar";
 
@@ -81,9 +83,10 @@ const initialProductForm: ProductFormState = {
   pushToMarketplace: false,
 };
 
-const MAX_PRODUCT_IMAGE_SIZE = 4 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_PRODUCT_IMAGE_COUNT = 3;
-const PRODUCT_IMAGE_MAX_DIMENSION = 1600;
+const PRODUCT_IMAGE_MAX_DIMENSION = 2000;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function productImageSizeLabel(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
@@ -197,9 +200,16 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
 }
 
 async function compressProductImage(file: File) {
-  if (!file.type.startsWith("image/") || file.type === "image/svg+xml" || file.type === "image/gif") {
-    if (file.size <= MAX_PRODUCT_IMAGE_SIZE) return file;
-    throw new Error(`${file.name} is ${productImageSizeLabel(file.size)}. Upload images must be 4MB or smaller.`);
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error(`${file.name} is not a supported image. Use JPG, PNG, or WebP.`);
+  }
+
+  if (file.size <= 0) {
+    throw new Error(`${file.name} is empty or invalid.`);
+  }
+
+  if (file.size > MAX_PRODUCT_IMAGE_SIZE) {
+    throw new Error(`${file.name} is ${productImageSizeLabel(file.size)}. Upload images must be 10MB or smaller.`);
   }
 
   const bitmap = await createImageBitmap(file);
@@ -217,12 +227,18 @@ async function compressProductImage(file: File) {
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
-  const blob = await canvasToBlob(canvas, "image/jpeg", 0.78);
+  let blob = await canvasToBlob(canvas, "image/jpeg", 0.82);
   if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
-    throw new Error(`${file.name} could not be compressed below 4MB. Please choose a smaller image.`);
+    blob = await canvasToBlob(canvas, "image/jpeg", 0.72);
+  }
+  if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
+    blob = await canvasToBlob(canvas, "image/jpeg", 0.62);
+  }
+  if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
+    throw new Error(`${file.name} could not be compressed below 10MB. Please choose a smaller image.`);
   }
 
-  if (file.size <= MAX_PRODUCT_IMAGE_SIZE && blob.size >= file.size) {
+  if (scale === 1 && blob.size >= file.size) {
     return file;
   }
 
@@ -258,6 +274,8 @@ export default function DashboardClient({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  const [isDeletingCategoryId, setIsDeletingCategoryId] = useState("");
 
   const { user, isLoading: userLoading, mutate: refreshUser } = useMe();
   const stores = user?.stores ?? [];
@@ -567,7 +585,36 @@ export default function DashboardClient({
     }
   }
 
-  async function addProductCategory() {
+  async function handleSettingsImageChange(field: "logo" | "banner", file?: File | null) {
+    setError("");
+
+    if (!file) {
+      setSettingsForm({ ...settingsForm, [field]: null });
+      return;
+    }
+
+    try {
+      const compressedImage = await compressProductImage(file);
+      setSettingsForm({ ...settingsForm, [field]: compressedImage });
+    } catch (err) {
+      setSettingsForm({ ...settingsForm, [field]: null });
+      setError(err instanceof Error ? err.message : "Unable to prepare image.");
+    }
+  }
+
+  function startEditCategory(category: ProductCategory) {
+    setEditingCategory(category);
+    setNewCategoryName(category.name);
+    setNewCategoryDescription(category.description || "");
+  }
+
+  function resetCategoryForm() {
+    setEditingCategory(null);
+    setNewCategoryName("");
+    setNewCategoryDescription("");
+  }
+
+  async function saveProductCategory() {
     if (!selectedStore?.id || !newCategoryName.trim()) return;
 
     setError("");
@@ -575,20 +622,52 @@ export default function DashboardClient({
     setIsSavingCategory(true);
 
     try {
-      const category = await createProductCategory({
-        name: newCategoryName.trim(),
-        description: newCategoryDescription.trim() || undefined,
-        storeId: selectedStore.id,
-      });
-      setProductForm({ ...productForm, categoryId: category.id });
-      setNewCategoryName("");
-      setNewCategoryDescription("");
+      if (editingCategory) {
+        await updateProductCategory(editingCategory.id, {
+          name: newCategoryName.trim(),
+          description: newCategoryDescription.trim() || undefined,
+        });
+        setNotice("Category updated.");
+      } else {
+        const category = await createProductCategory({
+          name: newCategoryName.trim(),
+          description: newCategoryDescription.trim() || undefined,
+          storeId: selectedStore.id,
+        });
+        setProductForm({ ...productForm, categoryId: category.id });
+        setNotice("Category added.");
+      }
+
+      resetCategoryForm();
       await refreshProductCategories();
-      setNotice("Category added.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to add category.");
+      setError(err instanceof Error ? err.message : "Unable to save category.");
     } finally {
       setIsSavingCategory(false);
+    }
+  }
+
+  async function removeProductCategory(category: ProductCategory) {
+    const confirmed = window.confirm(`Delete ${category.name}? Products using it will become uncategorized.`);
+    if (!confirmed) return;
+
+    setError("");
+    setNotice("");
+    setIsDeletingCategoryId(category.id);
+
+    try {
+      await deleteProductCategory(category.id);
+      if (productForm.categoryId === category.id) {
+        setProductForm({ ...productForm, categoryId: "" });
+      }
+      if (editingCategory?.id === category.id) resetCategoryForm();
+      await refreshProductCategories();
+      await refreshProducts();
+      setNotice("Category deleted.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to delete category.");
+    } finally {
+      setIsDeletingCategoryId("");
     }
   }
 
@@ -752,6 +831,7 @@ export default function DashboardClient({
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight md:text-3xl">
                 {activeView === "overview" && "Overview"}
                 {activeView === "products" && "Products"}
+                {activeView === "categories" && "Store categories"}
                 {activeView === "settings" && "Settings"}
               </h1>
             </div>
@@ -831,7 +911,101 @@ export default function DashboardClient({
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="divide-y divide-zinc-100 md:hidden">
+                  {productsLoading
+                    ? Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="space-y-3 p-4">
+                          <div className="h-4 w-3/4 rounded bg-zinc-100" />
+                          <div className="h-3 w-1/2 rounded bg-zinc-100" />
+                          <div className="h-9 w-full rounded bg-zinc-100" />
+                        </div>
+                      ))
+                    : visibleProducts.map((product) => (
+                        <div key={product.id} className="p-4">
+                          <div className="flex gap-3">
+                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                              {product.imageUrl || product.images?.[0] ? (
+                                <Image
+                                  src={product.imageUrl || product.images?.[0] || ""}
+                                  alt={product.name}
+                                  fill
+                                  sizes="56px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-xs font-bold text-zinc-500">
+                                  {initials(product.name)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-zinc-950">{product.name}</p>
+                              <p className="mt-1 text-sm font-semibold text-primary">
+                                {formatPrice(product.price, product.currency)}
+                              </p>
+                              <p className="mt-1 line-clamp-1 text-xs text-zinc-500">
+                                {[product.category || "Uncategorized", formatProductCondition(product.condition)]
+                                  .filter(Boolean)
+                                  .join(" - ")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold text-zinc-600">
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-zinc-50 px-3 py-2">
+                              <Eye className="h-3.5 w-3.5 text-primary" />
+                              {(product.viewCount ?? 0).toLocaleString()} views
+                            </span>
+                            <span className="rounded-lg bg-zinc-50 px-3 py-2">
+                              {product.pushToMarketplace === false ? "Store only" : "Marketplace"}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={selectedStore ? storeProductPath(selectedStore.slug, product) : "#"}
+                                className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                              >
+                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                View
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => copyOrderLink(product)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-primary/30 hover:text-primary"
+                                aria-label={`Copy order link for ${product.name}`}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => startEditProduct(product)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-primary/30 hover:text-primary"
+                                aria-label={`Edit ${product.name}`}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeProduct(product)}
+                                disabled={isDeletingProductId === product.id}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-60"
+                                aria-label={`Delete ${product.name}`}
+                              >
+                                {isDeletingProductId === product.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
                   <table className="min-w-full divide-y divide-zinc-200 text-left text-sm">
                     <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                       <tr>
@@ -875,7 +1049,7 @@ export default function DashboardClient({
                                   <div className="min-w-0">
                                     <p className="truncate font-semibold text-zinc-950">{product.name}</p>
                                     <p className="mt-1 truncate text-xs text-zinc-500">
-                                      {[product.category || "Uncategorized", formatProductCondition(product.condition)].filter(Boolean).join(" • ")}
+                                      {[product.category || "Uncategorized", formatProductCondition(product.condition)].filter(Boolean).join(" - ")}
                                     </p>
                                   </div>
                                 </div>
@@ -952,42 +1126,6 @@ export default function DashboardClient({
                     <p className="text-sm font-semibold text-zinc-900">No products yet</p>
                   </div>
                 )}
-              </section>
-              )}
-
-              {(productMode === "form" || editingProduct) && (
-              <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-1">
-                  <h2 className="font-display text-lg font-bold tracking-tight">Add store category</h2>
-                  <p className="text-xs leading-5 text-zinc-500">
-                    Store categories appear on your store page. Marketplace visibility is still controlled per product.
-                  </p>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <input
-                    value={newCategoryName}
-                    onChange={(event) => setNewCategoryName(event.target.value)}
-                    disabled={!selectedStore || isSavingCategory}
-                    placeholder="e.g. New arrivals"
-                    className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                  />
-                  <button
-                    type="button"
-                    onClick={addProductCategory}
-                    disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
-                    className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 px-3 text-xs font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
-                  </button>
-                </div>
-                <textarea
-                  rows={2}
-                  value={newCategoryDescription}
-                  onChange={(event) => setNewCategoryDescription(event.target.value)}
-                  disabled={!selectedStore || isSavingCategory}
-                  placeholder="Short category description"
-                  className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                />
               </section>
               )}
 
@@ -1165,14 +1303,14 @@ export default function DashboardClient({
                     <span className="text-xs font-semibold text-zinc-600">Product images</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       multiple
                       onChange={(event) => void handleProductImageChange(event.target.files)}
                       disabled={!selectedStore}
                       className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
                     />
                     <span className="mt-1 block text-xs text-zinc-500">
-                      Upload up to 3 images. Each image is compressed in your browser before upload and must finish under 4MB.
+                      Upload up to 3 JPG, PNG, or WebP images. Each file must be 10MB or smaller and is resized to 2000 x 2000 max before upload.
                     </span>
                     {productForm.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1254,6 +1392,130 @@ export default function DashboardClient({
                 </form>
               </section>
               )}
+            </div>
+          )}
+
+          {activeView === "categories" && (
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-2 border-b border-zinc-200 p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="font-display text-lg font-bold tracking-tight">Store categories</h2>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Categories here are only for this store. Marketplace categories stay under the product publish section.
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-500">
+                    {activeProductCategories.length} categories
+                  </p>
+                </div>
+
+                <div className="divide-y divide-zinc-100">
+                  {activeProductCategories.length > 0 ? (
+                    activeProductCategories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-zinc-950">{category.name}</p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {category.description || "No description"}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-zinc-400">
+                            {(category.productCount ?? 0).toLocaleString()} products
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startEditCategory(category)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-primary/30 hover:text-primary"
+                            aria-label={`Edit ${category.name}`}
+                            title="Edit"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProductCategory(category)}
+                            disabled={isDeletingCategoryId === category.id}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-60"
+                            aria-label={`Delete ${category.name}`}
+                            title="Delete"
+                          >
+                            {isDeletingCategoryId === category.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-12 text-center">
+                      <p className="text-sm font-semibold text-zinc-900">No store categories yet</p>
+                      <p className="mt-1 text-sm text-zinc-500">Create one to organize your store products.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-lg font-bold tracking-tight">
+                      {editingCategory ? "Edit category" : "Add category"}
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Store categories appear on your store page and product form.
+                    </p>
+                  </div>
+                  {editingCategory && (
+                    <button
+                      type="button"
+                      onClick={resetCategoryForm}
+                      className="text-sm font-semibold text-zinc-500 transition hover:text-zinc-950"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600">Name</span>
+                    <input
+                      value={newCategoryName}
+                      onChange={(event) => setNewCategoryName(event.target.value)}
+                      disabled={!selectedStore || isSavingCategory}
+                      placeholder="e.g. New arrivals"
+                      className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600">Description</span>
+                    <textarea
+                      rows={3}
+                      value={newCategoryDescription}
+                      onChange={(event) => setNewCategoryDescription(event.target.value)}
+                      disabled={!selectedStore || isSavingCategory}
+                      placeholder="Short category description"
+                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={saveProductCategory}
+                    disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {editingCategory ? "Save category" : "Add category"}
+                  </button>
+                </div>
+              </section>
             </div>
           )}
 
@@ -1450,10 +1712,13 @@ export default function DashboardClient({
                   <span className="text-xs font-semibold text-zinc-600">Business logo</span>
                   <input
                     type="file"
-                    accept="image/*"
-                    onChange={(event) => setSettingsForm({ ...settingsForm, logo: event.target.files?.[0] || null })}
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => void handleSettingsImageChange("logo", event.target.files?.[0] || null)}
                     className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800"
                   />
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    JPG, PNG, or WebP only. 10MB max, resized to 2000 x 2000 before upload.
+                  </span>
                   {settingsForm.logo && (
                     <span className="mt-1 block truncate text-xs text-zinc-500">
                       Selected: {settingsForm.logo.name}
@@ -1465,10 +1730,13 @@ export default function DashboardClient({
                   <span className="text-xs font-semibold text-zinc-600">Store banner</span>
                   <input
                     type="file"
-                    accept="image/*"
-                    onChange={(event) => setSettingsForm({ ...settingsForm, banner: event.target.files?.[0] || null })}
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => void handleSettingsImageChange("banner", event.target.files?.[0] || null)}
                     className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800"
                   />
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    JPG, PNG, or WebP only. 10MB max, resized to 2000 x 2000 before upload.
+                  </span>
                   {settingsForm.banner && (
                     <span className="mt-1 block truncate text-xs text-zinc-500">
                       Selected: {settingsForm.banner.name}

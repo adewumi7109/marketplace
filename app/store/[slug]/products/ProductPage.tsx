@@ -28,7 +28,7 @@ import { productCategorySegment } from "@/lib/productRoutes";
 import type { Store } from "@/lib/types";
 import type { CSSProperties } from "react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 const getProduct = cache(getStoreProductBySlug);
 

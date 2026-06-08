@@ -49,7 +49,6 @@ export default function GeneralTemplate({
         .filter((category): category is string => Boolean(category))
     )
   );
-  const featured = products.slice(0, 3);
   const storefrontUrl = `/store/${store.slug}`;
   const bannerText = store.bannerText?.trim() || defaultBannerText;
   const storeAddress = storeAddressLabel(store);
@@ -86,7 +85,6 @@ export default function GeneralTemplate({
 
           <div className="ml-auto hidden items-center gap-7 text-sm font-semibold text-zinc-700 lg:flex">
             <a href="#products" className="transition hover:text-zinc-950">Products</a>
-            <a href="#featured" className="transition hover:text-zinc-950">Featured</a>
             <a href="#about" className="transition hover:text-zinc-950">About</a>
           </div>
 
@@ -132,7 +130,6 @@ export default function GeneralTemplate({
           {mobileMenuOpen && (
             <nav className="mt-3 grid gap-2 text-sm font-semibold text-zinc-700">
               <a href="#products" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">Products</a>
-              <a href="#featured" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">Featured</a>
               <a href="#about" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-2 hover:bg-zinc-50">About</a>
             </nav>
           )}
@@ -200,35 +197,6 @@ export default function GeneralTemplate({
           </div>
         </div>
       </section>
-
-      {featured.length > 0 && (
-        <section id="featured" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Featured</p>
-              <h2 className="font-display text-2xl font-black tracking-tight">Products highlights</h2>
-            </div>
-            <a href="#products" className="hidden items-center gap-2 text-sm font-bold text-zinc-700 hover:text-zinc-950 sm:inline-flex">
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            {featured.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                storePhone={store.phone}
-                cardStyle="compact"
-                primaryColor={primaryColor}
-                showLocation={false}
-                onProductClick={onProductClick}
-                onProductPrefetch={onProductPrefetch}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 
       <section id="products" className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 border-b border-zinc-200 pb-5 md:flex-row md:items-end md:justify-between">

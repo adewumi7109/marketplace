@@ -317,3 +317,11 @@ export interface LocationQueryParams {
   limit?: number;
   pageSize?: number;
 }
+
+export interface CreateLocationInput {
+  city: string;
+  state: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+}

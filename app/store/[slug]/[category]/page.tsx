@@ -4,7 +4,7 @@ import { getProductsByStore, getStoreBySlug } from "@/lib/api";
 import { storeMetadata } from "@/lib/storefront";
 import StorePageClient from "../StorePageClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 interface Props {
   params: Promise<{ slug: string; category: string }>;
@@ -39,10 +39,10 @@ export default async function StoreCategoryPage({ params }: Props) {
   const { slug, category } = await params;
 
   try {
-    const storeResult = await getStoreBySlug(slug);
-    const productResult = await getProductsByStore(slug, { limit: 100 }).catch(() => ({
-      data: storeResult.products ?? [],
-    }));
+    const [storeResult, productResult] = await Promise.all([
+      getStoreBySlug(slug),
+      getProductsByStore(slug, { limit: 100 }),
+    ]);
 
     return (
       <StorePageClient

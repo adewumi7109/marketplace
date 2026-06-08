@@ -6,13 +6,14 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Layers3,
   LogOut,
   Package,
   Settings,
 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 
-export type DashboardView = "overview" | "products" | "settings";
+export type DashboardView = "overview" | "products" | "categories" | "settings";
 
 type SellerSidebarProps = {
   user?: UserProfile;
@@ -31,6 +32,7 @@ const navItems: Array<{
 }> = [
   { id: "overview", label: "Overview", icon: BarChart3, href: "/dashboard" },
   { id: "products", label: "Products", icon: Package, href: "/dashboard/products" },
+  { id: "categories", label: "Categories", icon: Layers3, href: "/dashboard/categories" },
   { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
 
@@ -89,7 +91,7 @@ export default function SellerSidebar({
           </button>
         </div>
 
-        <nav className="grid grid-cols-3 gap-2 border-b border-zinc-200 p-3 lg:block lg:space-y-1 lg:border-b-0">
+        <nav className="grid grid-cols-4 gap-2 border-b border-zinc-200 p-3 lg:block lg:space-y-1 lg:border-b-0">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = activeView === item.id;

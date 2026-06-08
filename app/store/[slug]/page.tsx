@@ -4,7 +4,7 @@ import { getStoreBySlug, getProductsByStore } from "@/lib/api";
 import { storeMetadata } from "@/lib/storefront";
 import StorePageClient from "./StorePageClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -27,10 +27,10 @@ export default async function StorePage({ params }: Props) {
   let products;
 
   try {
-    const storeResult = await getStoreBySlug(slug);
-    const productResult = await getProductsByStore(slug, { limit: 100 }).catch(() => ({
-      data: storeResult.products ?? [],
-    }));
+    const [storeResult, productResult] = await Promise.all([
+      getStoreBySlug(slug),
+      getProductsByStore(slug, { limit: 100 }),
+    ]);
 
     store = { ...storeResult, template: "general_v1" };
     products = productResult.data;

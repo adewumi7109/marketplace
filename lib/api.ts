@@ -5,6 +5,7 @@ import type {
   CreateStoreInput,
   CreateTemplateInput,
   Location,
+  CreateLocationInput,
   LocationQueryParams,
   LoginInput,
   GoogleAuthInput,
@@ -33,6 +34,10 @@ const TOKEN_STORAGE_KEY = "marketplace_access_token";
 type ApiFetchOptions = RequestInit & {
   token?: string | null;
   requireAuth?: boolean;
+  next?: {
+    revalidate?: number | false;
+    tags?: string[];
+  };
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -546,6 +551,15 @@ export async function getLocations(
   return unwrapPaginated(payload, ["data", "locations", "items"], normalizeLocation);
 }
 
+export async function saveDetectedLocation(input: CreateLocationInput) {
+  const payload = await apiFetch<unknown>("/api/locations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return normalizeLocation(unwrapOne(payload, ["data", "location"]));
+}
+
 export async function healthCheck() {
   return apiFetch<unknown>("/api/health");
 }
@@ -649,7 +663,7 @@ export async function checkStoreSlug(slug: string) {
 
 export async function getStoreBySlug(slug: string): Promise<Store> {
   const payload = await apiFetch<unknown>(`/api/stores/${encodeURIComponent(slug)}`, {
-    cache: "no-store",
+    next: { revalidate: 30 },
   });
 
   return normalizeStore(unwrapOne(payload, ["data", "store"]));
@@ -720,7 +734,8 @@ export async function getProductsByStore(
   params?: ProductQueryParams
 ): Promise<PaginatedResponse<Product>> {
   const payload = await apiFetch<unknown>(
-    appendQuery(`/api/stores/${encodeURIComponent(slug)}/products`, productQueryParams(params))
+    appendQuery(`/api/stores/${encodeURIComponent(slug)}/products`, productQueryParams(params)),
+    { next: { revalidate: 30 } }
   );
 
   return unwrapPaginated(payload, ["data", "products", "items"], normalizeProduct);
@@ -740,7 +755,7 @@ export async function getSellerProducts(
 export async function getStoreProductBySlug(slug: string, productSlug: string) {
   const payload = await apiFetch<unknown>(
     `/api/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productSlug)}`,
-    { cache: "no-store" }
+    { next: { revalidate: 30 } }
   );
 
   return normalizeProduct(unwrapOne(payload, ["data", "product"]));
@@ -868,7 +883,22 @@ export async function deleteStoreCategory(id: string, token?: string | null) {
 
 export async function getProductCategories(storeId?: string) {
   const payload = await apiFetch<unknown>(appendQuery("/api/categories/products", { storeId }));
-  return unwrapArray(payload, ["data", "categories", "productCategories"], (item) => item as ProductCategory);
+  return unwrapArray(payload, ["data", "categories", "productCategories"], (item) => {
+    const source = isRecord(item) ? item : {};
+    const count = isRecord(source._count) ? source._count : {};
+
+    return {
+      ...(source as Partial<ProductCategory>),
+      id: valueAsString(source.id),
+      name: valueAsString(source.name),
+      description: valueAsString(source.description) || null,
+      icon: valueAsString(source.icon) || null,
+      slug: valueAsString(source.slug) || null,
+      storeId: valueAsString(source.storeId) || null,
+      isActive: valueAsBoolean(source.isActive, true),
+      productCount: valueAsNumber(source.productCount, valueAsNumber(count.products)),
+    } as ProductCategory;
+  });
 }
 
 export async function createProductCategory(input: CreateCategoryInput, token?: string | null) {
