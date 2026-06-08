@@ -1,48 +1,32 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import Navbar from "@/components/Navbar";
-import { useCurrentLocation } from "@/lib/userLocation";
+import { headers } from "next/headers";
+import AppChromeClient from "@/components/AppChromeClient";
 
 interface AppChromeProps {
   children: React.ReactNode;
 }
 
-function SilentLocationCapture() {
-  useCurrentLocation();
-  return null;
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "kombomart.com";
+const RESERVED_SUBDOMAINS = new Set(["www", "api", "admin", "app"]);
+
+function isStoreSubdomainHost(host: string) {
+  const hostname = host.split(":")[0]?.toLowerCase() || "";
+  if (!hostname.endsWith(`.${ROOT_DOMAIN}`)) return false;
+
+  const subdomain = hostname.slice(0, -ROOT_DOMAIN.length - 1);
+  const parts = subdomain.split(".").filter(Boolean);
+  const slug = parts[0] === "www" ? parts[1] : parts[0];
+
+  return Boolean(slug && !RESERVED_SUBDOMAINS.has(slug));
 }
 
-export default function AppChrome({ children }: AppChromeProps) {
-  const pathname = usePathname();
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "kombomart.com";
-  const hostname = typeof window === "undefined" ? "" : window.location.hostname.toLowerCase();
-  const isStoreSubdomain =
-    hostname.endsWith(`.${rootDomain}`) &&
-    hostname !== rootDomain &&
-    hostname !== `www.${rootDomain}`;
-  const isStorefront = pathname.startsWith("/store/") || isStoreSubdomain;
-  const isAdminSurface = pathname.startsWith("/login") || pathname.startsWith("/dashboard");
-
-  if (isStorefront || isAdminSurface) {
-    return <main>{children}</main>;
-  }
+export default async function AppChrome({ children }: AppChromeProps) {
+  const headersList = await headers();
+  const host = headersList.get("x-forwarded-host") || headersList.get("host") || "";
+  const forceStorefront = isStoreSubdomainHost(host);
 
   return (
-    <>
-      <SilentLocationCapture />
-      <Navbar />
-      <main className="pt-16">{children}</main>
-      <footer className="mt-20 border-t border-primary/20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
-          <span>&copy; {new Date().getFullYear()} Kombomart. All rights reserved.</span>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-primary transition-colors">Terms</a>
-            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-            <a href="#" className="hover:text-primary transition-colors">Contact</a>
-          </div>
-        </div>
-      </footer>
-    </>
+    <AppChromeClient forceStorefront={forceStorefront}>
+      {children}
+    </AppChromeClient>
   );
 }
