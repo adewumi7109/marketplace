@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   Copy,
@@ -14,6 +15,7 @@ import {
   Plus,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   checkStoreSlug,
@@ -258,6 +260,7 @@ export default function DashboardClient({
   initialView?: DashboardView;
   productMode?: "list" | "form";
 }) {
+  const router = useRouter();
   const activeView = initialView;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -276,6 +279,7 @@ export default function DashboardClient({
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [isDeletingCategoryId, setIsDeletingCategoryId] = useState("");
@@ -377,7 +381,7 @@ export default function DashboardClient({
   }, []);
 
   useEffect(() => {
-    if (!mobileSidebarOpen) return;
+    if (!mobileSidebarOpen && !categoryModalOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -385,7 +389,12 @@ export default function DashboardClient({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [mobileSidebarOpen]);
+  }, [categoryModalOpen, mobileSidebarOpen]);
+
+  useEffect(() => {
+    if (userLoading || selectedStore || activeView === "settings") return;
+    router.replace("/dashboard/settings");
+  }, [activeView, router, selectedStore, userLoading]);
 
   useEffect(() => {
     setSettingsForm(emptySettings(selectedStore));
@@ -616,16 +625,25 @@ export default function DashboardClient({
     }
   }
 
+  function startAddCategory() {
+    setEditingCategory(null);
+    setNewCategoryName("");
+    setNewCategoryDescription("");
+    setCategoryModalOpen(true);
+  }
+
   function startEditCategory(category: ProductCategory) {
     setEditingCategory(category);
     setNewCategoryName(category.name);
     setNewCategoryDescription(category.description || "");
+    setCategoryModalOpen(true);
   }
 
   function resetCategoryForm() {
     setEditingCategory(null);
     setNewCategoryName("");
     setNewCategoryDescription("");
+    setCategoryModalOpen(false);
   }
 
   async function saveProductCategory() {
@@ -1445,7 +1463,7 @@ export default function DashboardClient({
           )}
 
           {activeView === "categories" && (
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <>
               <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-2 border-b border-zinc-200 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -1454,9 +1472,20 @@ export default function DashboardClient({
                       Categories here are only for this store. Marketplace categories stay under the product publish section.
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-zinc-500">
-                    {activeProductCategories.length} categories
-                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-zinc-500">
+                      {activeProductCategories.length} categories
+                    </p>
+                    <button
+                      type="button"
+                      onClick={startAddCategory}
+                      disabled={!selectedStore}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add category
+                    </button>
+                  </div>
                 </div>
 
                 <div className="divide-y divide-zinc-100">
@@ -1511,61 +1540,80 @@ export default function DashboardClient({
                 </div>
               </section>
 
-              <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="font-display text-lg font-bold tracking-tight">
-                      {editingCategory ? "Edit category" : "Add category"}
-                    </h2>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      Store categories appear on your store page and product form.
-                    </p>
-                  </div>
-                  {editingCategory && (
-                    <button
-                      type="button"
-                      onClick={resetCategoryForm}
-                      className="text-sm font-semibold text-zinc-500 transition hover:text-zinc-950"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600">Name</span>
-                    <input
-                      value={newCategoryName}
-                      onChange={(event) => setNewCategoryName(event.target.value)}
-                      disabled={!selectedStore || isSavingCategory}
-                      placeholder="e.g. New arrivals"
-                      className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600">Description</span>
-                    <textarea
-                      rows={3}
-                      value={newCategoryDescription}
-                      onChange={(event) => setNewCategoryDescription(event.target.value)}
-                      disabled={!selectedStore || isSavingCategory}
-                      placeholder="Short category description"
-                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={saveProductCategory}
-                    disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+              {categoryModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-4 backdrop-blur-sm sm:items-center"
+                  onClick={resetCategoryForm}
+                >
+                  <section
+                    className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-5 shadow-2xl"
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {editingCategory ? "Save category" : "Add category"}
-                  </button>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="font-display text-lg font-bold tracking-tight">
+                          {editingCategory ? "Edit category" : "Add category"}
+                        </h2>
+                        <p className="mt-1 text-xs leading-5 text-zinc-500">
+                          Store categories appear on your store page and product form.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={resetCategoryForm}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-950"
+                        aria-label="Close category form"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <label className="block">
+                        <span className="text-xs font-semibold text-zinc-600">Name</span>
+                        <input
+                          value={newCategoryName}
+                          onChange={(event) => setNewCategoryName(event.target.value)}
+                          disabled={!selectedStore || isSavingCategory}
+                          placeholder="e.g. New arrivals"
+                          className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold text-zinc-600">Description</span>
+                        <textarea
+                          rows={3}
+                          value={newCategoryDescription}
+                          onChange={(event) => setNewCategoryDescription(event.target.value)}
+                          disabled={!selectedStore || isSavingCategory}
+                          placeholder="Short category description"
+                          className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition disabled:bg-zinc-100 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                        />
+                      </label>
+                      <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={resetCategoryForm}
+                          disabled={isSavingCategory}
+                          className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveProductCategory}
+                          disabled={!selectedStore || !newCategoryName.trim() || isSavingCategory}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSavingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          {editingCategory ? "Save category" : "Add category"}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
                 </div>
-              </section>
-            </div>
+              )}
+            </>
           )}
 
           {activeView === "settings" && (
