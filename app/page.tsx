@@ -56,8 +56,13 @@ export default function MarketplacePage() {
       params.delete("q");
     }
 
-    const nextUrl = params.toString() ? `/?${params.toString()}` : "/";
-    window.history.replaceState(null, "", nextUrl);
+    // const nextUrl = params.toString() ? `/?${params.toString()}` : "/";
+    // window.history.replaceState(null, "", nextUrl);
+    const nextUrl = params.toString()
+  ? `/search?${params.toString()}`
+  : "/";
+
+router.push(nextUrl);
   }, []);
 
   const handleLocationChange = useCallback(

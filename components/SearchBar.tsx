@@ -38,11 +38,6 @@ export default function SearchBar({
 
   // ================= SEARCH INPUT SYNC =================
   useEffect(() => {
-    const t = setTimeout(() => onChange(local), 350);
-    return () => clearTimeout(t);
-  }, [local, onChange]);
-
-  useEffect(() => {
     setLocal(value);
   }, [value]);
 
@@ -127,6 +122,10 @@ export default function SearchBar({
     setSelectedState(null);
   }, []);
 
+  const handleSearchSubmit = useCallback(() => {
+    onChange(local.trimStart());
+  }, [local, onChange]);
+
   return (
     <div className={`flex items-center gap-3 ${className}`}>
 
@@ -148,21 +147,32 @@ export default function SearchBar({
           type="text"
           value={local}
           onChange={(e) => setLocal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearchSubmit();
+          }}
           placeholder={placeholder}
           className="w-full rounded-xl border border-primary/20 bg-white py-3 pl-11 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
 
-        {local && (
+        {local ? (
           <button
             onClick={() => {
               setLocal("");
               onChange("");
             }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+            className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
           >
             <X className="h-4 w-4" />
           </button>
-        )}
+        ) : null}
+
+        <button
+          onClick={handleSearchSubmit}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-primary p-1.5 text-white transition-colors hover:bg-primary/90 z-10"
+          aria-label="Search"
+        >
+          <Search className="h-4 w-4" />
+        </button>
       </div>
 
       {/* ================= DIALOG ================= */}
