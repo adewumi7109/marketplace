@@ -4,3 +4,4 @@ export {
   default,
   generateMarketplaceProductMetadata as generateMetadata,
 } from "../../ProductPage";
+
