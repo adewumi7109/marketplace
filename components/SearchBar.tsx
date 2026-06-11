@@ -31,7 +31,6 @@ export default function SearchBar({
   const [loading, setLoading] = useState(false);
 
   const [local, setLocal] = useState(value);
-  const [lastValue, setLastValue] = useState(value);
   const [open, setOpen] = useState(false);
 
   const [mode, setMode] = useState<SelectionMode>("states");
@@ -39,10 +38,9 @@ export default function SearchBar({
   const [selectedValue, setSelectedValue] = useState<LocationSelection | null>(null);
   const [locationLabel, setLocationLabel] = useState("All Nigeria");
 
-  if (value !== lastValue) {
-    setLastValue(value);
+  useEffect(() => {
     setLocal(value);
-  }
+  }, [value]);
 
   // ================= FETCH LOCATIONS =================
   useEffect(() => {
