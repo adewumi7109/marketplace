@@ -15,15 +15,25 @@ const HERO_CATEGORIES = ["Fashion", "Food", "Electronics", "General"];
 
 export default function MarketplacePage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("query") || params.get("q") || "";
+  });
   const [category, setCategory] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [minPrice, setMinPrice] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("minPrice") || "";
+  });
+  const [maxPrice, setMaxPrice] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("maxPrice") || "";
+  });
   const [page] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
-  const { products, isLoading, isError, error } = useProducts(undefined, {
+  const { products, total, isLoading, isError, error } = useProducts(undefined, {
     categoryId: category,
     search,
     minPrice,
@@ -44,26 +54,22 @@ export default function MarketplacePage() {
     window.history.replaceState(null, "", "/");
   }
 
-  const handleSearchChange = useCallback((value: string) => {
-    const nextSearch = value.trimStart();
-    setSearch(nextSearch);
+  function handleSearchChange(value: string) {
+    setSearch(value.trimStart());
+  }
 
-    const params = new URLSearchParams(window.location.search);
-    if (nextSearch) {
-      params.set("query", nextSearch);
-    } else {
-      params.delete("query");
-      params.delete("q");
-    }
+  const handleSearchSubmit = useCallback(
+    (value: string) => {
+      const nextSearch = value.trimStart();
+      const params = new URLSearchParams();
+      if (nextSearch) params.set("query", nextSearch);
+      if (minPrice) params.set("minPrice", minPrice);
+      if (maxPrice) params.set("maxPrice", maxPrice);
 
-    // const nextUrl = params.toString() ? `/?${params.toString()}` : "/";
-    // window.history.replaceState(null, "", nextUrl);
-    const nextUrl = params.toString()
-  ? `/search?${params.toString()}`
-  : "/";
-
-router.push(nextUrl);
-  }, []);
+      router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
+    },
+    [maxPrice, minPrice, router]
+  );
 
   const handleLocationChange = useCallback(
     (value: LocationSelection | null) => {
@@ -139,24 +145,18 @@ router.push(nextUrl);
   );
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const initialSearch = params.get("query") || params.get("q") || "";
-      if (initialSearch) setSearch(initialSearch);
-    setMinPrice(params.get("minPrice") || "");
-    setMaxPrice(params.get("maxPrice") || "");
-
     const onNavbarSearch = (event: Event) => {
       const nextSearch =
         event instanceof CustomEvent && typeof event.detail === "string"
           ? event.detail
           : "";
-      handleSearchChange(nextSearch);
+      setSearch(nextSearch.trimStart());
       setSidebarOpen(false);
     };
 
     window.addEventListener("marketplace-search", onNavbarSearch);
     return () => window.removeEventListener("marketplace-search", onNavbarSearch);
-  }, [handleSearchChange]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-zinc-950">
@@ -190,6 +190,7 @@ router.push(nextUrl);
       <SearchBar
         value={search}
         onChange={handleSearchChange}
+        onSubmit={handleSearchSubmit}
         onLocationChange={handleLocationChange}
         placeholder="Search products by name, category..."
         className="max-w-lg"
@@ -257,7 +258,11 @@ router.push(nextUrl);
                     {error instanceof Error ? error.message : "Unable to load products"}
                   </span>
                 ) : (
-                  <span>{search ? `Showing results for "${search}"` : "Browse products"}</span>
+                  <span>
+                    {search
+                      ? `Showing ${total.toLocaleString()} results for "${search}"`
+                      : `${total.toLocaleString()} products`}
+                  </span>
                 )}
               </div>
 

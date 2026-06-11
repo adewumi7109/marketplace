@@ -40,7 +40,7 @@ export default function ProductSearchPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const { products, isLoading, isError, error } = useProducts(undefined, {
+  const { products, total, isLoading, isError, error } = useProducts(undefined, {
     search: query,
     categoryId: selectedCategory,
     city:
@@ -198,7 +198,7 @@ export default function ProductSearchPage() {
               <p className="mt-1 text-sm text-zinc-500">
                 {isLoading
                   ? "Searching products..."
-                  : `${products.length} products found`}
+                  : `${total.toLocaleString()} products found`}
               </p>
             </div>
           </div>

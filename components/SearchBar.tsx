@@ -8,6 +8,7 @@ import { getLocations } from "@/lib/api";
 interface SearchBarProps {
   value?: string;
   onChange: (value: string) => void;
+  onSubmit?: (value: string) => void;
   onLocationChange?: (value: LocationSelection | null) => void;
   placeholder?: string;
   className?: string;
@@ -21,6 +22,7 @@ export type LocationSelection =
 export default function SearchBar({
   value = "",
   onChange,
+  onSubmit,
   onLocationChange,
   placeholder = "Search stores, products...",
   className = "",
@@ -29,6 +31,7 @@ export default function SearchBar({
   const [loading, setLoading] = useState(false);
 
   const [local, setLocal] = useState(value);
+  const [lastValue, setLastValue] = useState(value);
   const [open, setOpen] = useState(false);
 
   const [mode, setMode] = useState<SelectionMode>("states");
@@ -36,10 +39,10 @@ export default function SearchBar({
   const [selectedValue, setSelectedValue] = useState<LocationSelection | null>(null);
   const [locationLabel, setLocationLabel] = useState("All Nigeria");
 
-  // ================= SEARCH INPUT SYNC =================
-  useEffect(() => {
+  if (value !== lastValue) {
+    setLastValue(value);
     setLocal(value);
-  }, [value]);
+  }
 
   // ================= FETCH LOCATIONS =================
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function SearchBar({
     };
 
     fetchLocations();
-  }, [open]);
+  }, [locations.length, open]);
 
   // ================= GROUP BY STATE =================
   const grouped = useMemo(() => {
@@ -123,8 +126,10 @@ export default function SearchBar({
   }, []);
 
   const handleSearchSubmit = useCallback(() => {
-    onChange(local.trimStart());
-  }, [local, onChange]);
+    const value = local.trimStart();
+    onChange(value);
+    onSubmit?.(value);
+  }, [local, onChange, onSubmit]);
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
