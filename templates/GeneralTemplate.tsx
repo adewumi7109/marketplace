@@ -54,7 +54,7 @@ export default function GeneralTemplate({
         .filter((category): category is string => Boolean(category))
     )
   );
-  const storefrontUrl = `/store/${store.slug}`;
+  const storefrontUrl = `${store.slug}`;
   const bannerText = store.bannerText?.trim() || defaultBannerText;
   const storeAddress = storeAddressLabel(store);
   const hasMobilePanel = mobileSearchOpen || mobileMenuOpen;

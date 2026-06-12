@@ -115,10 +115,10 @@ export default async function MarketplaceProductPage({ params }: Props) {
               {product.inStock === false ? <XCircle className="h-3.5 w-3.5 text-red-500" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
               {product.inStock === false ? "Out of stock" : "In stock"}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1">
+           {/* <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1">
               <Eye className="h-3.5 w-3.5 text-zinc-500" />
               {(product.viewCount ?? 0).toLocaleString()} views
-            </span>
+            </span>*/}
             {product.condition && (
               <span className="rounded-full bg-zinc-100 px-3 py-1">
                 {formatProductCondition(product.condition)}

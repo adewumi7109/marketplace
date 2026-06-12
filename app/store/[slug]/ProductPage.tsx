@@ -191,10 +191,10 @@ export default async function StoreProductPage({ params }: Props) {
                 Negotiable
               </span>
             )}
-            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
+            {/* <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-zinc-200">
               <Eye className="h-3.5 w-3.5 text-zinc-500" />
               {(product.viewCount ?? 0).toLocaleString()} views
-            </span>
+            </span> */}
           </div>
 
           <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-zinc-950 sm:text-4xl">
@@ -223,7 +223,7 @@ export default async function StoreProductPage({ params }: Props) {
                   </dd>
                 </div>
               )}
-              {place && (
+              {/* {place && (
                 <div className="flex justify-between gap-4">
                   <dt className="inline-flex items-center gap-1 text-zinc-500">
                     <MapPin className="h-4 w-4 text-primary" style={{ color: primaryColor }} />
@@ -231,7 +231,7 @@ export default async function StoreProductPage({ params }: Props) {
                   </dt>
                   <dd className="text-right font-semibold text-zinc-950">{place}</dd>
                 </div>
-              )}
+              )} */}
             </dl>
           </div>
 

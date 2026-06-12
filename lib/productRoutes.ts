@@ -18,7 +18,7 @@ export function productCategorySegment(product: Product) {
 
 export function marketplaceProductPath(product: Product) {
   if (!product.store?.slug || !product.slug) return "";
-  return `/products/${product.store.slug}/${productCategorySegment(product)}/${product.slug}`;
+  return `/product/${productCategorySegment(product)}/${product.slug}`;
 }
 
 export function isCurrentStoreSubdomain(storeSlug: string) {
@@ -40,7 +40,7 @@ export function storeHomePath(storeSlug: string) {
 }
 
 export function storeProductPath(storeSlug: string, product: Product) {
-  if (!storeSlug || !(product.slug || product.id)) return "";
-  const productPath = `/products/${productCategorySegment(product)}/${product.slug || product.id}`;
+  if (!(product.slug || product.id)) return "";
+  const productPath = `/${productCategorySegment(product)}/${product.slug || product.id}`;
   return isCurrentStoreSubdomain(storeSlug) ? productPath : `/store/${storeSlug}${productPath}`;
 }

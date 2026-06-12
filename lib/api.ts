@@ -754,7 +754,7 @@ export async function getSellerProducts(
 
 export async function getStoreProductBySlug(slug: string, productSlug: string) {
   const payload = await apiFetch<unknown>(
-    `/api/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productSlug)}`,
+    `/api/stores/products/${encodeURIComponent(productSlug)}`,
     { next: { revalidate: 30 } }
   );
 
