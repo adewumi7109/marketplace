@@ -36,8 +36,6 @@ interface Props {
   params: Promise<{ slug: string; category?: string; productSlug: string }>;
 }
 
-
-const storeSlug = await getStoreSlugFromHost();
 function productImages(product: Awaited<ReturnType<typeof getStoreProductBySlug>>) {
   const images = product.images?.length
     ? product.images
@@ -60,6 +58,7 @@ function productStore(product: Awaited<ReturnType<typeof getStoreProductBySlug>>
 
 export async function generateStoreProductMetadata({ params }: Props): Promise<Metadata> {
   const { productSlug } = await params;
+  const storeSlug = await getStoreSlugFromHost();
 
   try {
     const product = await getProduct(storeSlug, productSlug);
