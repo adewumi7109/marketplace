@@ -44,7 +44,7 @@ export async function generateMarketplaceProductMetadata({ params }: Props): Pro
 
   try {
     const product = await getProduct(storeSlug, productSlug);
-    const canonical = `${getSiteUrl()}/products/${storeSlug}/${productCategorySegment(product)}/${product.slug || product.id}`;
+    const canonical = `${getSiteUrl()}/product/${productCategorySegment(product)}/${product.slug || product.id}`;
 
     return {
       title: `${product.name} in Nigeria`,
@@ -72,7 +72,7 @@ export default async function MarketplaceProductPage({ params }: Props) {
   const images = imagesFor(product);
   const price = formatPrice(product.price, product.currency);
   const place = locationLabel(product);
-  const canonical = `${getSiteUrl()}/products/${storeSlug}/${productCategorySegment(product)}/${product.slug || product.id}`;
+  const canonical = `${getSiteUrl()}/product/$${productCategorySegment(product)}/${product.slug || product.id}`;
 
   return (
     <div className="min-h-screen bg-white text-zinc-950">
