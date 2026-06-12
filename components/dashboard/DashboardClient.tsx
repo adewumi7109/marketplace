@@ -758,34 +758,50 @@ export default function DashboardClient({
 
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (
-      !selectedStore?.id ||
-      !productForm.name.trim() ||
-      !productForm.price ||
-      !productForm.condition ||
-      (productForm.pushToMarketplace && !productForm.marketplaceCategoryId)
-    ) return;
 
     setError("");
     setNotice("");
+
+    if (!selectedStore?.id) {
+      setError("Select a store before adding a product.");
+      return;
+    }
+
+    if (!productForm.name.trim()) {
+      setError("Product name is required.");
+      return;
+    }
+
+    if (!productForm.price) {
+      setError("Product price is required.");
+      return;
+    }
+
+    if (!productForm.condition) {
+      setError("Product condition is required.");
+      return;
+    }
+
+    if (productForm.pushToMarketplace && !productForm.marketplaceCategoryId) {
+      setError("Select a marketplace category before publishing.");
+      return;
+    }
+
     setIsSavingProduct(true);
 
     try {
-      if (editingProduct) {
-        await updateProduct(
-          editingProduct.id,
-          productPayload(productForm, { includeStoreId: false })
-        );
-        setNotice("Product updated.");
-      } else {
-        await createSellerProduct(
-          productPayload(productForm, { storeId: selectedStore.id, includeStoreId: true })
-        );
-        setNotice("Product added.");
-      }
+      const product = editingProduct
+        ? await updateProduct(
+            editingProduct.id,
+            productPayload(productForm, { includeStoreId: false })
+          )
+        : await createSellerProduct(
+            productPayload(productForm, { storeId: selectedStore.id, includeStoreId: true })
+          );
 
-      resetProductForm();
-      await Promise.all([refreshProducts(), refreshUser()]);
+      const productUrl = getStoreProductUrl(selectedStore, product);
+      router.push(productUrl);
+      return;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save product.");
     } finally {
@@ -1515,6 +1531,11 @@ export default function DashboardClient({
                     {isSavingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     {editingProduct ? "Save changes" : "Add product"}
                   </button>
+                  {error && (
+                    <p className="mt-3 text-sm font-medium text-red-600" aria-live="polite">
+                      {error}
+                    </p>
+                  )}
                 </form>
               </section>
               )}
