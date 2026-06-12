@@ -41,6 +41,6 @@ export function storeHomePath(storeSlug: string) {
 
 export function storeProductPath(storeSlug: string, product: Product) {
   if (!(product.slug || product.id)) return "";
-  const productPath = `/${productCategorySegment(product)}/${product.slug || product.id}`;
+  const productPath = `/store/product${productCategorySegment(product)}/${product.slug || product.id}`;
   return isCurrentStoreSubdomain(storeSlug) ? productPath : `/store/${storeSlug}${productPath}`;
 }
