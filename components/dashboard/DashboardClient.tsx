@@ -900,7 +900,9 @@ export default function DashboardClient({
                 <Link
                   href={getStoreUrl(selectedStore.slug)}
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                >
+                  target="_blank"
+                  rel="noopener noreferrer"
+               >
                   View store
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
@@ -1279,7 +1281,95 @@ export default function DashboardClient({
                     </select>
                   </label>
 
-                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                 
+
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600">Description</span>
+                    <textarea
+                      rows={4}
+                      value={productForm.description}
+                      onChange={(event) => setProductForm({ ...productForm, description: event.target.value })}
+                      disabled={!selectedStore}
+                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-semibold text-zinc-600">Product images</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={(event) => void handleProductImageChange(event.target.files)}
+                      disabled={!selectedStore}
+                      className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+                    />
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      Upload up to 3 JPG, PNG, or WebP images. Each file must be 10MB or smaller and is resized to 2000 x 2000 max before upload.
+                    </span>
+                    {productForm.images.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {productForm.images.map((image) => (
+                          <span
+                            key={`${image.name}-${image.size}`}
+                            className="max-w-full truncate rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600"
+                          >
+                            {image.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </label>
+
+                  <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={productForm.pushToMarketplace}
+                        onChange={(event) =>
+                          setProductForm({
+                            ...productForm,
+                            pushToMarketplace: event.target.checked,
+                            marketplaceCategoryId: event.target.checked ? productForm.marketplaceCategoryId : "",
+                          })
+                        }
+                        disabled={!selectedStore}
+                        className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-primary focus:ring-primary"
+                      />
+                      <span>
+                        <span className="block text-xs font-semibold text-zinc-700">Publish to marketplace</span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                          Keep this off for store-only products. Turn it on only when this item should appear in marketplace discovery.
+                        </span>
+                      </span>
+                    </label>
+
+                    {productForm.pushToMarketplace && (
+                     <>
+                   
+                     <label className="mt-3 block">
+                        <span className="text-xs font-semibold text-zinc-600">Marketplace category</span>
+                        <select
+                          required={productForm.pushToMarketplace}
+                          value={productForm.marketplaceCategoryId}
+                          onChange={(event) =>
+                            setProductForm({ ...productForm, marketplaceCategoryId: event.target.value })
+                          }
+                          disabled={!selectedStore}
+                          className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                        >
+                          <option value="">Select marketplace category</option>
+                          {activeMarketplaceCategories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="mt-1 block text-xs text-zinc-500">
+                          This category is used only for marketplace SEO, filtering, and discovery.
+                        </span>
+                      </label>
+                       <div className="rounded-lg border mt-8 border-zinc-200 bg-zinc-50 p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <span className="text-xs font-semibold text-zinc-700">Product location</span>
@@ -1354,91 +1444,7 @@ export default function DashboardClient({
                       </div>
                     )}
                   </div>
-
-                  <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600">Description</span>
-                    <textarea
-                      rows={4}
-                      value={productForm.description}
-                      onChange={(event) => setProductForm({ ...productForm, description: event.target.value })}
-                      disabled={!selectedStore}
-                      className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-xs font-semibold text-zinc-600">Product images</span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={(event) => void handleProductImageChange(event.target.files)}
-                      disabled={!selectedStore}
-                      className="mt-1 w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
-                    />
-                    <span className="mt-1 block text-xs text-zinc-500">
-                      Upload up to 3 JPG, PNG, or WebP images. Each file must be 10MB or smaller and is resized to 2000 x 2000 max before upload.
-                    </span>
-                    {productForm.images.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {productForm.images.map((image) => (
-                          <span
-                            key={`${image.name}-${image.size}`}
-                            className="max-w-full truncate rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600"
-                          >
-                            {image.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </label>
-
-                  <div className="rounded-lg border border-zinc-200 bg-white p-3">
-                    <label className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={productForm.pushToMarketplace}
-                        onChange={(event) =>
-                          setProductForm({
-                            ...productForm,
-                            pushToMarketplace: event.target.checked,
-                            marketplaceCategoryId: event.target.checked ? productForm.marketplaceCategoryId : "",
-                          })
-                        }
-                        disabled={!selectedStore}
-                        className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-primary focus:ring-primary"
-                      />
-                      <span>
-                        <span className="block text-xs font-semibold text-zinc-700">Publish to marketplace</span>
-                        <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                          Keep this off for store-only products. Turn it on only when this item should appear in marketplace discovery.
-                        </span>
-                      </span>
-                    </label>
-
-                    {productForm.pushToMarketplace && (
-                      <label className="mt-3 block">
-                        <span className="text-xs font-semibold text-zinc-600">Marketplace category</span>
-                        <select
-                          required={productForm.pushToMarketplace}
-                          value={productForm.marketplaceCategoryId}
-                          onChange={(event) =>
-                            setProductForm({ ...productForm, marketplaceCategoryId: event.target.value })
-                          }
-                          disabled={!selectedStore}
-                          className="mt-1 h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition disabled:bg-zinc-50 disabled:text-zinc-400 focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-                        >
-                          <option value="">Select marketplace category</option>
-                          {activeMarketplaceCategories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="mt-1 block text-xs text-zinc-500">
-                          This category is used only for marketplace SEO, filtering, and discovery.
-                        </span>
-                      </label>
+                    </>
                     )}
                   </div>
 
@@ -1672,14 +1678,22 @@ export default function DashboardClient({
                   )}
                 </label>
 
-                <label className="block md:col-span-2">
-                  <span className="text-xs font-semibold text-zinc-600">Phone number</span>
+              <label className="block md:col-span-2">
+                  <span className="text-xs font-semibold text-zinc-600">
+                    Phone Number (WhatsApp)
+                  </span>
+                 
                   <input
                     required
                     value={settingsForm.phone}
-                    onChange={(event) => setSettingsForm({ ...settingsForm, phone: event.target.value })}
-                    className="mt-1 h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                    onChange={(event) =>
+                      setSettingsForm({ ...settingsForm, phone: event.target.value })
+                    }
+                    className="mt-2 h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
                   />
+                   <p className="mt-1 text-xs text-zinc-500">
+                    Customers will place orders and contact you through this WhatsApp number. Make sure it is active and can receive WhatsApp messages.
+                  </p>
                 </label>
 
                 <label className="block md:col-span-2">
@@ -1774,11 +1788,7 @@ export default function DashboardClient({
                       )}
                     </div>
                   )}
-                  {settingsForm.state && settingsForm.city && exactCity && (
-                    <span className="mt-1 block text-xs text-emerald-600">
-                      Using existing city: {exactCity.city}, {exactCity.state}
-                    </span>
-                  )}
+                 
                 </label>
 
                 <label className="block md:col-span-2">

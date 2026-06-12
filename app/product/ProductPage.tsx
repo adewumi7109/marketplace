@@ -143,7 +143,9 @@ export default async function MarketplaceProductPage({ params }: Props) {
           {store && (
             <div className="mt-7 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Seller</p>
-              <Link href={`/store/${store.slug}`} className="mt-2 inline-flex items-center gap-2 font-bold text-zinc-950 transition hover:text-primary">
+              <Link 
+                target="_blank"
+                href={`https://${store.slug}.kombomart.com`} className="mt-2 inline-flex items-center gap-2 font-bold text-zinc-950 transition hover:text-primary">
                 <Store className="h-4 w-4" />
                 {store.name}
               </Link>

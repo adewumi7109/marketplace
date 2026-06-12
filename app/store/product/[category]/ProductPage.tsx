@@ -35,6 +35,9 @@ interface Props {
   params: Promise<{ slug: string; category?: string; productSlug: string }>;
 }
 
+const hostname = window.location.hostname; // sandexlizzy.kombomart.com
+const storeSlug = hostname.split(".")[0];
+
 function productImages(product: Awaited<ReturnType<typeof getStoreProductBySlug>>) {
   const images = product.images?.length
     ? product.images
@@ -59,7 +62,7 @@ export async function generateStoreProductMetadata({ params }: Props): Promise<M
   const { productSlug } = await params;
 
   try {
-    const product = await getProduct("sandexlizzy", productSlug);
+    const product = await getProduct(storeSlug, productSlug);
     return storeProductMetadata(product, productStore(product));
   } catch {
     return { title: "Product" };
