@@ -799,9 +799,9 @@ export default function DashboardClient({
             productPayload(productForm, { storeId: selectedStore.id, includeStoreId: true })
           );
 
-      const productUrl = getStoreProductUrl(selectedStore, product);
-      router.push(productUrl);
-      return;
+      setNotice(editingProduct ? "Product updated." : "Product added.");
+      resetProductForm();
+      await Promise.all([refreshProducts(), refreshUser()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save product.");
     } finally {
@@ -1531,8 +1531,13 @@ export default function DashboardClient({
                     {isSavingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     {editingProduct ? "Save changes" : "Add product"}
                   </button>
+                  {notice && (
+                    <p className="mt-3 text-sm font-medium text-emerald-600" aria-live="polite">
+                      {notice}
+                    </p>
+                  )}
                   {error && (
-                    <p className="mt-3 text-sm font-medium text-red-600" aria-live="polite">
+                    <p className="mt-2 text-sm font-medium text-red-600" aria-live="polite">
                       {error}
                     </p>
                   )}
