@@ -204,20 +204,57 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
 }
 
 async function compressProductImage(file: File) {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error(`${file.name} is not a supported image. Use JPG, PNG, or WebP.`);
+  // 1. Reject HEIC (iPhone default format that browsers can't decode)
+  if (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    file.name.toLowerCase().endsWith(".heic") ||
+    file.name.toLowerCase().endsWith(".heif")
+  ) {
+    throw new Error(
+      `${file.name} is in HEIC format (iPhone default). Please convert to JPG first: Open the photo → Share → Save to Files → it will convert to JPG automatically, then upload from Files.`
+    );
   }
 
+  // 2. Validate supported format
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error(
+      `${file.name} is not a supported image. Use JPG, PNG, or WebP.`
+    );
+  }
+
+  // 3. Validate non-empty
   if (file.size <= 0) {
     throw new Error(`${file.name} is empty or invalid.`);
   }
 
+  // 4. Validate size limit
   if (file.size > MAX_PRODUCT_IMAGE_SIZE) {
-    throw new Error(`${file.name} is ${productImageSizeLabel(file.size)}. Upload images must be 10MB or smaller.`);
+    throw new Error(
+      `${file.name} is ${productImageSizeLabel(
+        file.size
+      )}. Upload images must be 10MB or smaller.`
+    );
   }
 
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, PRODUCT_IMAGE_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  // 5. Decode image with error handling (mobile canvas/memory safety)
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch (err) {
+    throw new Error(
+      `Cannot read "${file.name}". The image may be corrupted or in an unsupported format.`
+    );
+  }
+
+  // 6. Calculate scale — cap at 1500px for mobile memory safety
+  const maxDimension = Math.min(PRODUCT_IMAGE_MAX_DIMENSION, 1500);
+  const scale = Math.min(
+    1,
+    maxDimension / Math.max(bitmap.width, bitmap.height)
+  );
+
+  // 7. Create canvas
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -225,12 +262,24 @@ async function compressProductImage(file: File) {
   const context = canvas.getContext("2d");
   if (!context) {
     bitmap.close();
-    throw new Error("Unable to compress image.");
+    throw new Error(
+      "Browser blocked image processing. Try a smaller image or a different browser."
+    );
   }
 
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  // 8. Draw with error handling (catches mobile canvas memory limits)
+  try {
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  } catch (err) {
+    bitmap.close();
+    throw new Error(
+      `Image "${file.name}" is too large to process on this device. Try a smaller image (under 5MB).`
+    );
+  }
+
   bitmap.close();
 
+  // 9. Compress to JPEG with progressive quality reduction
   let blob = await canvasToBlob(canvas, "image/jpeg", 0.82);
   if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
     blob = await canvasToBlob(canvas, "image/jpeg", 0.72);
@@ -239,13 +288,17 @@ async function compressProductImage(file: File) {
     blob = await canvasToBlob(canvas, "image/jpeg", 0.62);
   }
   if (blob.size > MAX_PRODUCT_IMAGE_SIZE) {
-    throw new Error(`${file.name} could not be compressed below 10MB. Please choose a smaller image.`);
+    throw new Error(
+      `${file.name} could not be compressed below 10MB. Please choose a smaller image.`
+    );
   }
 
+  // 10. Skip re-encoding if original is already smaller and no resize happened
   if (scale === 1 && blob.size >= file.size) {
     return file;
   }
 
+  // 11. Return as new File with JPEG extension
   const compressedName = file.name.replace(/\.[^.]+$/, "") || "product-image";
   return new File([blob], `${compressedName}.jpg`, {
     type: "image/jpeg",
