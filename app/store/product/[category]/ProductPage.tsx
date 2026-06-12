@@ -26,6 +26,7 @@ import {
 } from "@/lib/storefront";
 import type { Store } from "@/lib/types";
 import type { CSSProperties } from "react";
+import { getStoreSlugFromHost } from "@/lib/server/getSlugFromHost";
 
 export const revalidate = 30;
 
@@ -35,9 +36,8 @@ interface Props {
   params: Promise<{ slug: string; category?: string; productSlug: string }>;
 }
 
-const hostname = window.location.hostname; // sandexlizzy.kombomart.com
-const storeSlug = hostname.split(".")[0];
 
+const storeSlug = await getStoreSlugFromHost();
 function productImages(product: Awaited<ReturnType<typeof getStoreProductBySlug>>) {
   const images = product.images?.length
     ? product.images
